@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fenerbahçe & Galatasaray Puan Tahmin Oyunu</title>
+    <meta name="color-scheme" content="light dark">
+    <title>Avrupa'da Türk Takımları — Puan Tahmin Oyunu</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
@@ -218,9 +219,151 @@
         .match-list-item .guess-btn-mini:active:not(:disabled) {
             transform: scale(0.95);
         }
+        /* ============================
+           THEME VARIABLES (light default)
+           ============================ */
+        :root {
+            --bg-page: #f0f0f0;
+            --bg-card: #ffffff;
+            --bg-card-muted: #f3f4f6;
+            --bg-elevated: #e5e7eb;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --text-muted: #6b7280;
+            --text-faint: #9ca3af;
+            --border: #e5e7eb;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --shadow-hover: 0 6px 12px rgba(0, 0, 0, 0.12);
+            color-scheme: light;
+        }
+
+        html.dark {
+            --bg-page: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-muted: #0f172a;
+            --bg-elevated: #334155;
+            --text-primary: #f1f5f9;
+            --text-secondary: #cbd5e1;
+            --text-muted: #94a3b8;
+            --text-faint: #64748b;
+            --border: #334155;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.4);
+            --shadow-hover: 0 6px 12px rgba(0, 0, 0, 0.5);
+            color-scheme: dark;
+        }
+
+        body {
+            background-color: var(--bg-page);
+            color: var(--text-primary);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .card {
+            background-color: var(--bg-card);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .leaderboard-bg { background: linear-gradient(135deg, var(--bg-card-muted), var(--bg-elevated)); }
+
+        html.dark .text-gray-800 { color: var(--text-primary) !important; }
+        html.dark .text-gray-700 { color: var(--text-secondary) !important; }
+        html.dark .text-gray-600 { color: var(--text-muted) !important; }
+        html.dark .text-gray-500 { color: var(--text-muted) !important; }
+        html.dark .text-gray-400 { color: var(--text-faint) !important; }
+        html.dark .bg-gray-100 { background-color: var(--bg-page) !important; }
+        html.dark .bg-gray-50  { background-color: var(--bg-card-muted) !important; }
+        html.dark .bg-white    { background-color: var(--bg-card) !important; }
+
+        /* Team border colors — slightly lighter in dark mode for visibility */
+        html.dark .team-gs  { border-left-color: #ff4d4d !important; }
+        html.dark .team-fb  { border-left-color: #ffe83d !important; }
+        html.dark .team-bjk { border-left-color: #e5e7eb !important; }
+        html.dark .team-ts  { border-left-color: #d9334d !important; }
+
+        /* Gradient text — works in both modes */
+        html.dark .gradient-text {
+            background: linear-gradient(90deg, #60a5fa, #fb7185);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Form inputs */
+        html.dark input[type="text"] {
+            background-color: var(--bg-card);
+            border-color: var(--border);
+            color: var(--text-primary);
+        }
+        html.dark input[type="text"]::placeholder {
+            color: var(--text-faint);
+        }
+
+        /* Guess buttons — default state */
+        html.dark .guess-btn {
+            background-color: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+        html.dark .guess-btn:hover:not(:disabled) {
+            background-color: var(--bg-elevated);
+            filter: brightness(1.15);
+        }
+
+        /* Message box */
+        html.dark #messageBox {
+            color: #fff;
+        }
+
+        /* Status badges — ensure legible in dark mode */
+        html.dark .status-upcoming { background-color: var(--bg-elevated); color: var(--text-secondary); }
+        html.dark .status-correct  { background-color: #059669; }
+        html.dark .status-incorrect { background-color: #dc2626; }
+        html.dark .status-locked { background-color: var(--bg-elevated); color: var(--text-muted); }
+
+        html.dark .status-badge { color: #fff; }
+
+        /* Points badges */
+        html.dark .points-0 { background-color: #dc2626; }
+        html.dark .points-1 { background-color: #d97706; }
+        html.dark .points-3 { background-color: #059669; }
+
+        /* Guess btn mini in dark mode */
+        html.dark .guess-btn-mini {
+            background-color: var(--bg-elevated);
+            color: var(--text-primary);
+        }
+        html.dark .guess-btn-mini:hover:not(:disabled) {
+            background-color: var(--border);
+        }
+
+        /* Theme toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 40;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 9999px;
+            width: 2.5rem;
+            height: 2.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        .theme-toggle:hover { transform: scale(1.05); }
+        .theme-toggle svg { width: 1.25rem; height: 1.25rem; }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+
+<!-- Theme toggle button -->
+<button id="themeToggle" class="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+    <svg id="iconLight" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+    <svg id="iconDark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+</button>
 
 <div class="container">
     <header class="text-center my-8">
@@ -302,6 +445,39 @@
 
 <script>
 // ============================================================
+// THEME (runs first — must be before page paint to prevent FOUC)
+// ============================================================
+(function initTheme() {
+    const STORAGE_KEY = 'fbgs-theme';
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved === 'dark') {
+        document.documentElement.classList.add('dark');
+    } else if (saved === 'light') {
+        document.documentElement.classList.remove('dark');
+    } else {
+        // Default to system preference
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+    }
+    updateThemeToggleIcon();
+})();
+
+function toggleTheme() {
+    const isDark = document.documentElement.classList.toggle('dark');
+    localStorage.setItem('fbgs-theme', isDark ? 'dark' : 'light');
+    updateThemeToggleIcon();
+}
+
+function updateThemeToggleIcon() {
+    const isDark = document.documentElement.classList.contains('dark');
+    const lightIcon = document.getElementById('iconLight');
+    const darkIcon = document.getElementById('iconDark');
+    if (lightIcon) lightIcon.style.display = isDark ? 'block' : 'none';
+    if (darkIcon) darkIcon.style.display = isDark ? 'none' : 'block';
+}
+
+// ============================================================
 // STATE
 // ============================================================
 const API_BASE = window.location.origin;
@@ -344,6 +520,7 @@ function initApp() {
 }
 
 function setupEventListeners() {
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     document.getElementById('validateTokenButton').addEventListener('click', handleValidateToken);
     document.getElementById('tokenInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') handleValidateToken();
