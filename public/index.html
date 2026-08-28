@@ -1023,10 +1023,14 @@ function renderLeaderboard() {
             playerMap[g.playerName] = {
                 name: g.playerName,
                 guesses: [],
-                earned:   { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
-                maxPoss:  { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
-                totalMax: { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
-                icons:    { 'Galatasaray': [], 'Fenerbahçe': [], 'Beşiktaş': [], 'Trabzonspor': [] }
+                // Points actually earned (only from played matches, only if correct)
+                earned:    { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+                // Total points the player GUESSED for this team (regardless of correctness)
+                // This is the "projeksiyon" — sum of all guess values per team
+                projected: { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+                // Max possible (3 per match) per team
+                totalMax:  { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+                icons:     { 'Galatasaray': [], 'Fenerbahçe': [], 'Beşiktaş': [], 'Trabzonspor': [] }
             };
         }
         const p = playerMap[g.playerName];
@@ -1035,9 +1039,10 @@ function renderLeaderboard() {
         if (!match) return;
         const team = match.team;
         p.totalMax[team] += 3;
+        // The player's guess value counts toward their "projeksiyon" no matter what
+        p.projected[team] += g.points;
 
         if (match.played) {
-            p.maxPoss[team] += 3;
             if (g.points === match.actualPoints) {
                 p.earned[team] += g.points;
                 p.icons[team].push('correct');
@@ -1056,21 +1061,19 @@ function renderLeaderboard() {
         return a.name.localeCompare(b.name);
     });
 
-    // Compute projected max across all players for the bar chart scale
+    // Bar chart scale = max total projeksiyon across all players
     const maxProjected = Math.max(...players.map(p =>
-        Object.values(p.earned).reduce((s, v) => s + v, 0) +
-        Object.values(p.maxPoss).reduce((s, v) => s + v, 0)
+        Object.values(p.projected).reduce((s, v) => s + v, 0)
     ), 1);
 
     listContainer.innerHTML = '';
     players.forEach((p, i) => {
-        const earnedTotal  = Object.values(p.earned).reduce((s, v) => s + v, 0);
-        const maxPossTotal = Object.values(p.maxPoss).reduce((s, v) => s + v, 0);
-        const totalMaxAll  = Object.values(p.totalMax).reduce((s, v) => s + v, 0);
-        const projected    = earnedTotal + maxPossTotal;
+        const earnedTotal    = Object.values(p.earned).reduce((s, v) => s + v, 0);
+        const projectedTotal = Object.values(p.projected).reduce((s, v) => s + v, 0);
+        const totalMaxAll    = Object.values(p.totalMax).reduce((s, v) => s + v, 0);
 
-        const earnedWidth    = (earnedTotal / maxProjected) * 100;
-        const projectedWidth = (projected  / maxProjected) * 100;
+        const projectedWidth = (projectedTotal / maxProjected) * 100;
+        const earnedWidth    = projectedTotal > 0 ? (earnedTotal / projectedTotal) * projectedWidth : 0;
 
         let trophy = '';
         if (i === 0) trophy = '<span class="ml-2 text-yellow-500">🏆</span>';
@@ -1084,11 +1087,15 @@ function renderLeaderboard() {
             const icons = padArray(p.icons[team], teamCount, 'tbd').map(s => '<div class="status-icon ' + s + '"></div>').join('');
             return '<div class="flex items-center flex-wrap gap-1 text-xs">' +
                 '<span class="font-bold ' + meta.textClass + ' w-8">' + meta.short + ':</span>' +
-                '<span class="font-bold text-gray-800">' + p.earned[team] + '</span>' +
-                '<span class="text-gray-400">/' + p.maxPoss[team] + '</span>' +
+                '<span class="font-bold text-green-600">' + p.earned[team] + '</span>' +
+                '<span class="text-gray-400">/</span>' +
+                '<span class="font-bold text-indigo-500">' + p.projected[team] + '</span>' +
                 '<div class="flex items-center ml-1">' + icons + '</div>' +
                 '</div>';
         }).join('');
+
+        const unearned = projectedTotal - earnedTotal;
+        const unearnedWidth = (unearned / maxProjected) * 100;
 
         const div = document.createElement('div');
         div.className = 'p-4 bg-white rounded-lg shadow-sm' + (isMe ? ' ring-2 ring-blue-500' : '');
@@ -1101,17 +1108,21 @@ function renderLeaderboard() {
                 <div class="flex items-center space-x-4 text-sm">
                     <div>
                         <div class="text-xs text-gray-500">Kazanılan</div>
-                        <div class="text-2xl font-extrabold text-green-600">${earnedTotal}<span class="text-sm text-gray-500 font-normal"> / ${maxPossTotal}</span></div>
+                        <div class="text-2xl font-extrabold text-green-600">${earnedTotal}</div>
                     </div>
                     <div>
                         <div class="text-xs text-gray-500">Projeksiyon</div>
-                        <div class="text-2xl font-extrabold text-indigo-600">${projected}<span class="text-sm text-gray-500 font-normal"> / ${totalMaxAll}</span></div>
+                        <div class="text-2xl font-extrabold text-indigo-600">${projectedTotal}</div>
+                    </div>
+                    <div>
+                        <div class="text-xs text-gray-500">Maks</div>
+                        <div class="text-2xl font-extrabold text-gray-400">${totalMaxAll}</div>
                     </div>
                 </div>
             </div>
-            <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-3" title="Kazanılan: ${earnedTotal} • Projeksiyon: ${projected}">
+            <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-3" title="Kazanılan: ${earnedTotal} • Projeksiyon: ${projectedTotal}">
                 <div class="absolute inset-y-0 left-0 bg-green-500" style="width:${earnedWidth}%"></div>
-                <div class="absolute inset-y-0 bg-indigo-400 opacity-50" style="left:${earnedWidth}%; width:${(projectedWidth - earnedWidth)}%"></div>
+                <div class="absolute inset-y-0 bg-indigo-400" style="left:${earnedWidth}%; width:${unearnedWidth}%"></div>
             </div>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
                 ${teamBreakdown}
