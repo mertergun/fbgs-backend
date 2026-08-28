@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fenerbahçe & Galatasaray Puan Tahmin Oyunu</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f0f0;
+            color: #333;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        .container { max-width: 800px; margin: 0 auto; padding: 1rem; }
+        .card {
+            background-color: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #1d4ed8, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .leaderboard-bg { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); }
+        .status-icon {
+            display: inline-block;
+            width: 0.8rem;
+            height: 0.8rem;
+            border-radius: 50%;
+            margin-right: 0.2rem;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+        .status-icon.correct { background-color: #10B981; }
+        .status-icon.incorrect { background-color: #EF4444; }
+        .status-icon.tbd { background-color: #9CA3AF; }
+
+        .carousel-container { width: 100%; overflow: hidden; position: relative; }
+        .carousel-track { display: flex; transition: transform 0.3s ease-in-out; }
+        .carousel-item { min-width: 100%; box-sizing: border-box; padding: 0 1rem; }
+        .carousel-item .card { margin-left: 0.5rem; margin-right: 0.5rem; }
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-top: 4px solid #fff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+        .loading-big {
+            border: 6px solid #e5e7eb;
+            border-top: 6px solid #3b82f6;
+            width: 40px;
+            height: 40px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .carousel-container::-webkit-scrollbar { display: none; }
+        .carousel-container { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .team-gs { border-left: 4px solid #E50000; }
+        .team-fb { border-left: 4px solid #FFE000; }
+        .team-bjk { border-left: 4px solid #000000; }
+        .team-ts { border-left: 4px solid #8B0000; }
+
+        .tournament-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.15rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.025rem;
+        }
+        .tournament-ucl { background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #78350f; }
+        .tournament-uel { background: linear-gradient(90deg, #3b82f6, #2563eb); color: #fff; }
+        .tournament-uecl { background: linear-gradient(90deg, #8b5cf6, #7c3aed); color: #fff; }
+
+        .home-icon { color: #3B82F6; }
+        .away-icon { color: #8B5CF6; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .status-upcoming { background-color: #9CA3AF; color: white; }
+        .status-correct { background-color: #10B981; color: white; }
+        .status-incorrect { background-color: #EF4444; color: white; }
+        .status-locked { background-color: #4B5563; color: white; }
+
+        .points-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 9999px;
+            font-weight: bold;
+            font-size: 0.75rem;
+        }
+        .points-0 { background-color: #EF4444; color: white; }
+        .points-1 { background-color: #F59E0B; color: white; }
+        .points-3 { background-color: #10B981; color: white; }
+
+        .match-list-item { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .match-list-item:hover { transform: translateY(-2px); box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1); }
+
+        .player-guess { border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; margin-bottom: 0.5rem; }
+        .player-guess:last-child { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+        .player-name { font-weight: 600; }
+        .match-detail-toggle { cursor: pointer; user-select: none; transition: all 0.2s ease; }
+        .match-detail-toggle:hover { color: #3b82f6; }
+        .match-detail-toggle.expanded .icon { transform: rotate(180deg); }
+        .player-guesses-container { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; }
+        .player-guesses-container.expanded { max-height: 500px; }
+
+        .carousel-container .nav-arrow { opacity: 0.7; transition: opacity 0.2s ease, transform 0.2s ease; }
+        .carousel-container .nav-arrow:hover { opacity: 1; transform: translateY(-50%) scale(1.1); }
+        .carousel-container .nav-arrow.disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .home-badge { background: #3B82F6; color: white; }
+        .away-badge { background: #8B5CF6; color: white; }
+
+        /* ===== UX Animations ===== */
+        .btn-spinner {
+            border: 3px solid rgba(59, 130, 246, 0.25);
+            border-top-color: #3B82F6;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        .btn-spinner-light {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 0.6s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
+        .guess-btn {
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .guess-btn:not(:disabled):hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .guess-btn:not(:disabled):active {
+            transform: translateY(0) scale(0.97);
+        }
+
+        .btn-flash-success {
+            animation: flashSuccess 0.5s ease-out;
+        }
+        @keyframes flashSuccess {
+            0% { background-color: #10B981; transform: scale(1.05); }
+            50% { background-color: #10B981; transform: scale(1); }
+            100% { background-color: #10B981; transform: scale(1); }
+        }
+
+        .card-flash {
+            animation: cardFlash 0.6s ease-out;
+        }
+        @keyframes cardFlash {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+
+        .check-icon {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            vertical-align: middle;
+            color: white;
+        }
+        .check-icon-pop {
+            animation: checkPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        @keyframes checkPop {
+            0% { transform: scale(0); }
+            60% { transform: scale(1.3); }
+            100% { transform: scale(1); }
+        }
+
+        /* Toast / message box animations */
+        #messageBox {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        /* Match list card transition */
+        .match-list-item .guess-btn-mini {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+            min-width: 2rem;
+            transition: all 0.15s ease;
+        }
+        .match-list-item .guess-btn-mini:hover:not(:disabled) {
+            transform: translateY(-1px);
+        }
+        .match-list-item .guess-btn-mini:active:not(:disabled) {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
+
+<div class="container">
+    <header class="text-center my-8">
+        <h1 class="text-4xl font-bold gradient-text">Avrupa'da Türk Takımları</h1>
+        <p class="mt-2 text-gray-600">2026/27 Sezonu • UCL • UEL • UECL — Puanlarını tahmin et, en yüksek skoru al!</p>
+        <div id="playerNameDisplay" class="text-xl font-bold text-gray-800 mt-4 hidden"></div>
+        <div id="editUntilBanner" class="mt-2 text-sm text-amber-700 bg-amber-100 inline-block px-3 py-1 rounded-full hidden"></div>
+        <div id="expiredBanner" class="mt-2 text-sm text-red-700 bg-red-100 inline-block px-3 py-1 rounded-full hidden"></div>
+    </header>
+
+    <main class="space-y-6">
+        <!-- Token Input View -->
+        <div id="tokenInputView" class="card flex flex-col items-center justify-center text-center">
+            <h2 class="text-2xl font-bold text-gray-800">Davet Kodun Gerekli</h2>
+            <p class="mt-2 text-gray-600">Lütfen yöneticin sana verdiği davet linkini aç veya kodu gir.</p>
+            <input type="text" id="tokenInput" placeholder="inv_xxxxxxxxxxxxxxxx" class="mt-4 w-full sm:w-2/3 rounded-md border-gray-300 shadow-sm p-2 text-center font-mono" required>
+            <button id="validateTokenButton" class="mt-4 w-full sm:w-2/3 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors">Kodu Doğrula</button>
+            <div id="tokenError" class="mt-3 text-red-600 hidden"></div>
+        </div>
+
+        <!-- Scoreboard View -->
+        <div id="scoreboardView" class="card leaderboard-bg hidden">
+            <h2 class="text-2xl font-bold text-gray-800">Puan Durumu</h2>
+            <p class="text-gray-600 mt-2">Skor tablosu aşağıdadır.</p>
+            <div id="loadingIndicator" class="flex justify-center items-center py-8 hidden">
+                <div class="loading-spinner loading-big"></div>
+            </div>
+            <div id="leaderboardList" class="mt-4 space-y-3"></div>
+            <div class="mt-6 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="viewMatchListButton" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition-colors">Maç Listesi</button>
+                <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors">Tahmin Yap</button>
+            </div>
+        </div>
+
+        <!-- Games Carousel View -->
+        <div id="gameCarouselView" class="hidden">
+            <div class="carousel-container relative">
+                <button id="prevMatchButton" class="hidden md:block absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-70 hover:bg-opacity-100 text-blue-600 p-2 rounded-full shadow-md transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+                </button>
+                <div id="carouselTrack" class="carousel-track"></div>
+                <button id="nextMatchButton" class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-70 hover:bg-opacity-100 text-blue-600 p-2 rounded-full shadow-md transition-all">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+                </button>
+            </div>
+            <div class="mt-4 text-center text-gray-600">
+                <span id="carouselIndicator">1 / 30</span>
+            </div>
+            <div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="returnToScoreboardButton" class="bg-gray-400 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-gray-500 transition-colors">Puan Durumuna Dön</button>
+            </div>
+        </div>
+
+        <!-- Match List View -->
+        <div id="matchListView" class="card leaderboard-bg hidden">
+            <!-- Header row: title + top back button -->
+            <div class="flex justify-between items-center flex-wrap gap-2 mb-3">
+                <h2 class="text-2xl font-bold text-gray-800">Maç Listesi</h2>
+                <button id="returnFromMatchListButtonTop" class="bg-gray-400 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-gray-500 transition-colors text-sm">← Puan Durumuna Dön</button>
+            </div>
+            <!-- Filter buttons -->
+            <div class="flex space-x-2 flex-wrap gap-y-2 mb-4">
+                <button data-filter="gs"  class="match-filter-btn px-3 py-1 rounded-lg text-white font-semibold bg-red-600 hover:bg-red-700 transition-colors text-sm">Galatasaray</button>
+                <button data-filter="fb"  class="match-filter-btn px-3 py-1 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 transition-colors text-sm">Fenerbahçe</button>
+                <button data-filter="bjk" class="match-filter-btn px-3 py-1 rounded-lg text-white font-semibold bg-gray-800 hover:bg-gray-900 transition-colors text-sm">Beşiktaş</button>
+                <button data-filter="ts"  class="match-filter-btn px-3 py-1 rounded-lg text-white font-semibold bg-rose-900 hover:bg-rose-950 transition-colors text-sm">Trabzonspor</button>
+                <button data-filter="all" class="match-filter-btn px-3 py-1 rounded-lg text-white font-semibold bg-purple-600 hover:bg-purple-700 transition-colors text-sm">Tümü</button>
+            </div>
+            <div class="grid grid-cols-1 gap-4" id="matchListContainer"></div>
+            <div class="mt-6 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
+                <button id="returnFromMatchListButton" class="bg-gray-400 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-gray-500 transition-colors">← Puan Durumuna Dön</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Message Box -->
+    <div id="messageBox" class="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 transform transition-transform duration-300 scale-0 origin-center"></div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+const API_BASE = window.location.origin;
+const STORAGE_KEY_TOKEN = 'fbgs-invite-token';
+
+let ws = null;
+let allMatches = [];
+let allGuesses = [];
+let currentPlayer = null; // { id, name, inviteToken, editUntil, canEdit, expired }
+let currentMatchIndex = 0;
+let isTouch = false;
+let isDragging = false;
+let startX = 0;
+let currentTranslate = 0;
+let isInitialized = false;
+let currentMatchListFilter = 'all';
+
+// ============================================================
+// INIT
+// ============================================================
+function initApp() {
+    if (isInitialized) return;
+    isInitialized = true;
+
+    setupEventListeners();
+    connectWebSocket();
+
+    // Check for token in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlToken = urlParams.get('token');
+
+    const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+    const tokenToCheck = urlToken || storedToken;
+
+    if (tokenToCheck) {
+        validateToken(tokenToCheck);
+    } else {
+        showView('tokenInput');
+    }
+}
+
+function setupEventListeners() {
+    document.getElementById('validateTokenButton').addEventListener('click', handleValidateToken);
+    document.getElementById('tokenInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') handleValidateToken();
+    });
+
+    document.getElementById('viewMatchListButton').addEventListener('click', () => showView('matchList'));
+    document.getElementById('viewGameCarouselButton').addEventListener('click', () => showView('gameCarousel'));
+    document.getElementById('returnToScoreboardButton').addEventListener('click', () => showView('scoreboard'));
+    document.getElementById('returnFromMatchListButton').addEventListener('click', () => showView('scoreboard'));
+    document.getElementById('returnFromMatchListButtonTop').addEventListener('click', () => showView('scoreboard'));
+
+    // Filter buttons are inside matchListView, not matchListContainer
+    document.getElementById('matchListView').addEventListener('click', (e) => {
+        if (e.target.classList.contains('match-filter-btn')) {
+            currentMatchListFilter = e.target.dataset.filter;
+            populateMatchList(currentMatchListFilter);
+        }
+    });
+
+    document.getElementById('prevMatchButton').addEventListener('click', () => {
+        if (currentMatchIndex > 0) { currentMatchIndex--; updateCarousel(); }
+    });
+    document.getElementById('nextMatchButton').addEventListener('click', () => {
+        if (currentMatchIndex < allMatches.length - 1) { currentMatchIndex++; updateCarousel(); }
+    });
+
+    setupCarouselGestures();
+}
+
+function setupCarouselGestures() {
+    const track = document.getElementById('carouselTrack');
+    if (!track) return;
+
+    track.addEventListener('mousedown', (e) => {
+        if (isTouch) return;
+        isDragging = true; startX = e.clientX; track.style.cursor = 'grabbing';
+    });
+    track.addEventListener('touchstart', (e) => {
+        isTouch = true; isDragging = true; startX = e.touches[0].clientX;
+    });
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging || isTouch) return;
+        const d = e.clientX - startX;
+        track.style.transform = 'translateX(' + (currentTranslate + d) + 'px)';
+    });
+    window.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        const d = e.touches[0].clientX - startX;
+        track.style.transform = 'translateX(' + (currentTranslate + d) + 'px)';
+    });
+    window.addEventListener('mouseup', (e) => {
+        if (!isDragging || isTouch) return;
+        isDragging = false; track.style.cursor = 'grab';
+        const movedBy = e.clientX - startX;
+        const itemWidth = track.children[0] ? track.children[0].offsetWidth : 0;
+        const threshold = itemWidth / 4;
+        if (movedBy > threshold && currentMatchIndex > 0) currentMatchIndex--;
+        else if (movedBy < -threshold && currentMatchIndex < allMatches.length - 1) currentMatchIndex++;
+        updateCarousel();
+    });
+    window.addEventListener('touchend', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const movedBy = e.changedTouches[0].clientX - startX;
+        const itemWidth = track.children[0] ? track.children[0].offsetWidth : 0;
+        const threshold = itemWidth / 4;
+        if (movedBy > threshold && currentMatchIndex > 0) currentMatchIndex--;
+        else if (movedBy < -threshold && currentMatchIndex < allMatches.length - 1) currentMatchIndex++;
+        updateCarousel();
+    });
+}
+
+// ============================================================
+// TOKEN VALIDATION
+// ============================================================
+function handleValidateToken() {
+    const input = document.getElementById('tokenInput').value.trim();
+    if (!input) {
+        showTokenError('Lütfen davet kodunu gir');
+        return;
+    }
+    validateToken(input);
+}
+
+function validateToken(token) {
+    document.getElementById('tokenError').classList.add('hidden');
+    fetch(API_BASE + '/api/invite/' + encodeURIComponent(token))
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) {
+                showTokenError(data.error);
+                return;
+            }
+            currentPlayer = data.player;
+            localStorage.setItem(STORAGE_KEY_TOKEN, token);
+
+            // Update URL without reload
+            const newUrl = window.location.pathname + '?token=' + token;
+            window.history.replaceState({}, '', newUrl);
+
+            // Update UI
+            const nameDisplay = document.getElementById('playerNameDisplay');
+            nameDisplay.textContent = 'Tahmin Yapıyorsun: ' + currentPlayer.name;
+            nameDisplay.classList.remove('hidden');
+
+            // Edit until banner
+            if (currentPlayer.editUntil) {
+                const banner = document.getElementById('editUntilBanner');
+                if (currentPlayer.canEdit) {
+                    banner.textContent = 'Tahmin süresi: ' + new Date(currentPlayer.editUntil).toLocaleDateString('tr-TR') + ' tarihine kadar';
+                    banner.classList.remove('hidden');
+                    document.getElementById('expiredBanner').classList.add('hidden');
+                } else {
+                    banner.classList.add('hidden');
+                    const expiredBanner = document.getElementById('expiredBanner');
+                    expiredBanner.textContent = 'Tahmin süren doldu - sadece görüntüleyebilirsin';
+                    expiredBanner.classList.remove('hidden');
+                }
+            }
+
+            document.getElementById('tokenInput').value = '';
+            loadAllData();
+            showView('scoreboard');
+        })
+        .catch(err => {
+            console.error('Token validation error:', err);
+            showTokenError('Sunucu hatası - daha sonra tekrar dene');
+        });
+}
+
+function showTokenError(msg) {
+    const el = document.getElementById('tokenError');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+}
+
+// ============================================================
+// WEBSOCKET
+// ============================================================
+function connectWebSocket() {
+    const wsUrl = API_BASE.replace('http', 'ws');
+    ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => console.log('WebSocket connected');
+    ws.onmessage = (event) => {
+        try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'leaderboard_update' || data.type === 'match_locked') {
+                loadAllData();
+            }
+        } catch (err) { console.error('WS parse error:', err); }
+    };
+    ws.onclose = () => { console.log('WebSocket disconnected'); setTimeout(connectWebSocket, 3000); };
+    ws.onerror = (err) => console.error('WS error:', err);
+}
+
+// ============================================================
+// DATA
+// ============================================================
+function loadAllData(silent = false) {
+    if (!silent) showLoading(true);
+    const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
+    Promise.all([
+        fetch(API_BASE + '/api/matches?token=' + encodeURIComponent(token)).then(r => r.json()),
+        fetch(API_BASE + '/api/guesses').then(r => r.json())
+    ]).then(([matches, guesses]) => {
+        allMatches = matches;
+        allGuesses = guesses;
+        renderLeaderboard();
+        populateMatchList(currentMatchListFilter);
+        // Refresh only the current carousel card (do NOT rebuild the whole carousel,
+        // otherwise the position resets and the user loses their place).
+        if (allMatches[currentMatchIndex]) {
+            const cur = allMatches[currentMatchIndex];
+            const curCard = document.getElementById('match-card-' + cur.id);
+            if (curCard) updateGuessButtonState(curCard, cur.id);
+        }
+        if (!silent) showLoading(false);
+    }).catch(err => {
+        console.error('Load error:', err);
+        showMessage('Veriler yüklenirken hata oluştu', 'error');
+        if (!silent) showLoading(false);
+    });
+}
+
+// ============================================================
+// GUESS SUBMISSION
+// ============================================================
+function submitGuess(matchId, points, buttonEl) {
+    if (!currentPlayer) {
+        showMessage('Lütfen önce davet kodunla giriş yap', 'error');
+        return;
+    }
+
+    if (!currentPlayer.canEdit) {
+        showMessage('Tahmin süren doldu - artık değişiklik yapamazsın', 'error');
+        return;
+    }
+
+    const match = allMatches.find(m => m.id === matchId);
+    if (!match) return;
+    if (match.played) {
+        showMessage('Bu maç oynandı - tahmin alınmıyor', 'error');
+        return;
+    }
+
+    // === Optimistic update ===
+    // 1. Save previous state in case we need to revert
+    const previousGuess = allGuesses.find(g =>
+        g.matchId === matchId && g.playerName === currentPlayer.name
+    );
+
+    // 2. Update local state immediately
+    const newGuess = {
+        id: 'optimistic-' + Date.now(),
+        playerId: currentPlayer.id,
+        playerName: currentPlayer.name,
+        matchId: matchId,
+        points: points,
+        guessedAt: new Date().toISOString()
+    };
+
+    if (previousGuess) {
+        const idx = allGuesses.indexOf(previousGuess);
+        allGuesses[idx] = newGuess;
+    } else {
+        allGuesses.push(newGuess);
+    }
+
+    // 3. Update button to show spinner + disable siblings
+    // Find the closest container (carousel card OR match list item)
+    const card = buttonEl.closest('.card')
+              || buttonEl.closest('[id^="match-card-"]')
+              || buttonEl.closest('.match-list-item');
+    if (card) {
+        // Disable all guess buttons in this card
+        card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(b => {
+            b.disabled = true;
+            b.style.pointerEvents = 'none';
+        });
+        // Show spinner on the clicked button
+        buttonEl.innerHTML = '<span class="btn-spinner"></span>';
+        buttonEl.style.opacity = '1';
+    }
+
+    // 4. Update leaderboard + match list stats immediately (optimistic)
+    renderLeaderboard();
+    populateMatchList(currentMatchListFilter);
+
+    // 5. Make API call
+    fetch(API_BASE + '/api/guess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: currentPlayer.inviteToken, matchId, points })
+    }).then(r => r.json()).then(data => {
+        if (data.error) {
+            // Revert optimistic update
+            if (previousGuess) {
+                const idx = allGuesses.findIndex(g =>
+                    g.matchId === matchId && g.playerName === currentPlayer.name
+                );
+                if (idx !== -1) allGuesses[idx] = previousGuess;
+            } else {
+                allGuesses = allGuesses.filter(g =>
+                    !(g.matchId === matchId && g.playerName === currentPlayer.name)
+                );
+            }
+            showMessage(data.error, 'error');
+            // Re-enable buttons
+            if (card) {
+                card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(b => {
+                    b.disabled = false;
+                    b.style.pointerEvents = '';
+                });
+            }
+            // Restore button label
+            buttonEl.innerHTML = points + ' Puan';
+            return;
+        }
+
+        // 6. SUCCESS - show checkmark briefly then restore label
+        if (card) {
+            card.classList.add('card-flash');
+            setTimeout(() => card.classList.remove('card-flash'), 600);
+        }
+
+        // Show checkmark for 600ms
+        buttonEl.innerHTML = '<svg class="check-icon check-icon-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        buttonEl.classList.add('btn-flash-success');
+        buttonEl.classList.remove('bg-gray-200', 'text-gray-800');
+        buttonEl.classList.add('bg-green-500', 'text-white');
+
+        setTimeout(() => {
+            buttonEl.classList.remove('btn-flash-success');
+            if (card) {
+                card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(b => {
+                    b.disabled = false;
+                    b.style.pointerEvents = '';
+                });
+            }
+            // Update button label back
+            updateGuessButtonState(card, matchId);
+        }, 700);
+
+        showMessage('Tahmin kaydedildi!', 'success');
+
+        // 7. Auto-advance to next unguessed match after a short delay
+        setTimeout(() => {
+            autoAdvanceToNextUnguessed(matchId);
+        }, 900);
+
+        // 8. Background refresh from server to sync
+        setTimeout(() => loadAllData(true), 500);
+
+    }).catch(err => {
+        console.error('Guess error:', err);
+        // Revert
+        if (previousGuess) {
+            const idx = allGuesses.findIndex(g =>
+                g.matchId === matchId && g.playerName === currentPlayer.name
+            );
+            if (idx !== -1) allGuesses[idx] = previousGuess;
+        } else {
+            allGuesses = allGuesses.filter(g =>
+                !(g.matchId === matchId && g.playerName === currentPlayer.name)
+            );
+        }
+        if (card) {
+            card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(b => {
+                b.disabled = false;
+                b.style.pointerEvents = '';
+            });
+        }
+        buttonEl.innerHTML = points + ' Puan';
+        showMessage('Sunucu hatası - tahmin kaydedilemedi', 'error');
+    });
+}
+
+function autoAdvanceToNextUnguessed(currentMatchId) {
+    if (!currentPlayer) return;
+    const myGuessedIds = new Set(
+        allGuesses.filter(g => g.playerName === currentPlayer.name).map(g => g.matchId)
+    );
+
+    // Find next unguessed match
+    const currentIdx = allMatches.findIndex(m => m.id === currentMatchId);
+    if (currentIdx === -1) return;
+
+    let nextIdx = (currentIdx + 1) % allMatches.length;
+    let attempts = 0;
+    while (myGuessedIds.has(allMatches[nextIdx].id) && attempts < allMatches.length) {
+        nextIdx = (nextIdx + 1) % allMatches.length;
+        attempts++;
+    }
+
+    // If all guessed, stay on current
+    if (attempts >= allMatches.length) {
+        return;
+    }
+
+    // Only advance if there's an unguessed match ahead
+    if (myGuessedIds.size < allMatches.length && nextIdx !== currentIdx) {
+        currentMatchIndex = nextIdx;
+        updateCarousel();
+    }
+}
+
+// Update the visual state of guess buttons in a single card
+function updateGuessButtonState(card, matchId) {
+    if (!card) return;
+    const match = allMatches.find(m => m.id === matchId);
+    if (!match) return;
+
+    const myGuess = allGuesses.find(g =>
+        g.matchId === matchId &&
+        currentPlayer && g.playerName === currentPlayer.name
+    );
+
+    card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(btn => {
+        const pts = parseInt(btn.dataset.points);
+
+        // Reset classes
+        btn.classList.remove(
+            'bg-blue-400', 'bg-green-500', 'bg-red-500',
+            'text-white', 'text-gray-800', 'bg-gray-200',
+            'opacity-50', 'cursor-not-allowed', 'btn-flash-success'
+        );
+        btn.disabled = false;
+        btn.style.pointerEvents = '';
+
+        if (match.played) {
+            // Locked
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            btn.classList.add('opacity-50', 'cursor-not-allowed');
+            if (pts === match.actualPoints) {
+                btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                btn.classList.add('bg-green-500', 'text-white');
+            }
+            if (myGuess && pts === myGuess.points && pts !== match.actualPoints) {
+                btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                btn.classList.add('bg-red-500', 'text-white');
+            }
+        } else {
+            if (myGuess && pts === myGuess.points) {
+                btn.classList.remove('bg-gray-200', 'text-gray-800');
+                btn.classList.add('bg-blue-400', 'text-white');
+            } else {
+                btn.classList.add('bg-gray-200', 'text-gray-800');
+            }
+        }
+    });
+
+    // Update result info
+    const resultInfo = card.querySelector('.match-result-info');
+    if (resultInfo) {
+        if (match.played) {
+            resultInfo.textContent = `Sonuç: ${match.resultScore} (${match.actualPoints} puan)`;
+            resultInfo.classList.remove('hidden');
+        } else {
+            resultInfo.classList.add('hidden');
+        }
+    }
+}
+
+// ============================================================
+// UI RENDERING
+// ============================================================
+function renderLeaderboard() {
+    const container = document.getElementById('leaderboardList');
+    if (!container) return;
+
+    if (allGuesses.length === 0) {
+        container.innerHTML = '<div class="p-4 bg-white rounded-lg text-center text-gray-500 italic">Henüz tahmin yapılmamış. İlk tahminini sen yap!</div>';
+        return;
+    }
+
+    const playerMap = {};
+    allGuesses.forEach(g => {
+        if (!playerMap[g.playerName]) {
+            playerMap[g.playerName] = { name: g.playerName, guesses: [], fbCorrect: 0, gsCorrect: 0, fbGuesses: [], gsGuesses: [] };
+        }
+        playerMap[g.playerName].guesses.push(g);
+        const match = allMatches.find(m => m.id === g.matchId);
+        if (!match) return;
+        const idx = parseInt(match.id.replace(/\D/g, '')) - 1;
+        if (match.team === 'Fenerbahçe') {
+            if (match.played) {
+                if (g.points === match.actualPoints) {
+                    playerMap[g.playerName].fbCorrect++;
+                    playerMap[g.playerName].fbGuesses[idx] = 'correct';
+                } else {
+                    playerMap[g.playerName].fbGuesses[idx] = 'incorrect';
+                }
+            } else {
+                playerMap[g.playerName].fbGuesses[idx] = 'tbd';
+            }
+        } else {
+            if (match.played) {
+                if (g.points === match.actualPoints) {
+                    playerMap[g.playerName].gsCorrect++;
+                    playerMap[g.playerName].gsGuesses[idx] = 'correct';
+                } else {
+                    playerMap[g.playerName].gsGuesses[idx] = 'incorrect';
+                }
+            } else {
+                playerMap[g.playerName].gsGuesses[idx] = 'tbd';
+            }
+        }
+    });
+
+    const players = Object.values(playerMap).sort((a, b) => {
+        const c = (b.fbCorrect + b.gsCorrect) - (a.fbCorrect + a.gsCorrect);
+        if (c !== 0) return c;
+        return a.name.localeCompare(b.name);
+    });
+
+    container.innerHTML = '';
+    players.forEach((p, i) => {
+        const fbIcons = padArray(p.fbGuesses, 8, 'tbd').map(s => '<div class="status-icon ' + s + '"></div>').join('');
+        const gsIcons = padArray(p.gsGuesses, 8, 'tbd').map(s => '<div class="status-icon ' + s + '"></div>').join('');
+        let trophy = '';
+        if (i === 0) trophy = '<span class="ml-2 text-yellow-500">🏆</span>';
+        else if (i === 1) trophy = '<span class="ml-2 text-gray-400">🥈</span>';
+        else if (i === 2) trophy = '<span class="ml-2 text-amber-700">🥉</span>';
+        const isMe = currentPlayer && p.name === currentPlayer.name;
+        const totalCorrect = p.fbCorrect + p.gsCorrect;
+        const div = document.createElement('div');
+        div.className = 'flex flex-col space-y-2 p-4 bg-white rounded-lg shadow-sm' + (isMe ? ' ring-2 ring-blue-500' : '');
+        div.innerHTML = `
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between border p-2 rounded-lg">
+                <div class="flex items-center mb-2 md:mb-0">
+                    <span class="font-bold text-xl text-gray-800">${p.name}${trophy}${isMe ? ' <span class="ml-1 text-xs text-blue-600">(Sen)</span>' : ''}</span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <span class="text-2xl font-extrabold text-green-600">${totalCorrect} Doğru</span>
+                    <div class="flex items-center space-x-2 text-sm text-gray-600">
+                        <span>FB: <span class="font-bold text-blue-600">${p.fbCorrect}</span></span>
+                        <span>GS: <span class="font-bold text-red-600">${p.gsCorrect}</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4 text-xs text-gray-500 px-2">
+                <div class="flex items-center"><span class="mr-1">FB:</span>${fbIcons}</div>
+                <div class="flex items-center"><span class="mr-1">GS:</span>${gsIcons}</div>
+            </div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function populateMatchList(filter) {
+    const container = document.getElementById('matchListContainer');
+    if (!container) return;
+    container.innerHTML = '';
+
+    let filtered = allMatches;
+    if (filter === 'gs') filtered = allMatches.filter(m => m.team === 'Galatasaray');
+    else if (filter === 'fb') filtered = allMatches.filter(m => m.team === 'Fenerbahçe');
+    else if (filter === 'bjk') filtered = allMatches.filter(m => m.team === 'Beşiktaş');
+    else if (filter === 'ts') filtered = allMatches.filter(m => m.team === 'Trabzonspor');
+
+    filtered.forEach(match => {
+        const matchGuesses = allGuesses.filter(g => g.matchId === match.id);
+        const stats = { 0: 0, 1: 0, 3: 0 };
+        matchGuesses.forEach(g => { if (stats[g.points] !== undefined) stats[g.points]++; });
+        let mostPopular = '?';
+        let maxCount = 0;
+        for (const pts of [3, 1, 0]) {
+            if (stats[pts] > maxCount) { maxCount = stats[pts]; mostPopular = pts; }
+        }
+        const teamClass = match.team === 'Galatasaray' ? 'team-gs' : match.team === 'Fenerbahçe' ? 'team-fb' : match.team === 'Beşiktaş' ? 'team-bjk' : 'team-ts';
+        let statusText = 'Oynanacak';
+        let statusClass = 'status-upcoming';
+        if (match.played) {
+            statusText = match.resultScore + ' (' + match.actualPoints + ' puan)';
+            statusClass = 'status-correct';
+        }
+        const myGuess = matchGuesses.find(g => currentPlayer && g.playerName === currentPlayer.name);
+        let myGuessHTML = '';
+        if (myGuess) {
+            let guessStatusClass = 'status-upcoming';
+            if (match.played) {
+                guessStatusClass = myGuess.points === match.actualPoints ? 'status-correct' : 'status-incorrect';
+            } else if (currentPlayer && !currentPlayer.canEdit) {
+                guessStatusClass = 'status-locked';
+            }
+            myGuessHTML = '<div class="mt-2 flex items-center"><span class="text-sm text-gray-600 mr-2">Senin Tahminin:</span><span class="status-badge ' + guessStatusClass + '">' + myGuess.points + ' puan</span></div>';
+        }
+        const div = document.createElement('div');
+        div.className = 'match-list-item ' + teamClass + ' bg-white p-4 rounded-lg shadow-sm';
+        div.innerHTML = `
+            <div class="flex justify-between items-start mb-2">
+                <div class="flex-1">
+                    <div class="flex items-center gap-2 flex-wrap mb-1">
+                        ${getTournamentBadge(match.tournament)}
+                        <h3 class="text-md font-bold text-gray-800">${match.team} <span class="text-gray-400">vs</span> ${match.opponent}</h3>
+                        <span class="text-sm">${getHomeAwayLabel(match.homeOrAway)}</span>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">
+                        ${match.matchDate ? '📅 ' + formatTurkishDate(match.matchDate) : ''}
+                    </p>
+                </div>
+                <span class="status-badge ${statusClass}">${statusText}</span>
+            </div>
+            <!-- League context (small, muted) -->
+            <div class="space-y-1 text-xs text-gray-400">
+                ${match.prevLeagueContext ? '<p>⬆ Önceki: ' + match.prevLeagueContext + '</p>' : ''}
+                ${match.nextLeagueContext ? '<p>⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : ''}
+            </div>
+            <div class="flex items-center justify-between mt-3">
+                <div class="flex space-x-2">
+                    <div class="flex flex-col items-center"><span class="points-badge points-0">${stats[0]}</span><span class="text-xs text-gray-500 mt-1">0 puan</span></div>
+                    <div class="flex flex-col items-center"><span class="points-badge points-1">${stats[1]}</span><span class="text-xs text-gray-500 mt-1">1 puan</span></div>
+                    <div class="flex flex-col items-center"><span class="points-badge points-3">${stats[3]}</span><span class="text-xs text-gray-500 mt-1">3 puan</span></div>
+                </div>
+                <div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">${mostPopular}</span></div>
+            </div>
+            ${!match.played && currentPlayer && currentPlayer.canEdit ? `
+            <div class="flex space-x-2 mt-3 guess-actions" data-match-id="${match.id}">
+                <button data-points="0" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">0</button>
+                <button data-points="1" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">1</button>
+                <button data-points="3" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">3</button>
+            </div>` : ''}
+            ${myGuessHTML}
+            <div class="mt-4">
+                <div class="match-detail-toggle flex justify-between items-center bg-gray-50 p-2 rounded-lg cursor-pointer">
+                    <span class="font-medium text-gray-700">Oyuncu Tahminleri (${matchGuesses.length})</span>
+                    <span class="icon transition-transform duration-300">▼</span>
+                </div>
+                <div class="player-guesses-container overflow-hidden mt-2">
+                    <div class="p-3 bg-gray-50 rounded-lg" id="guess-list-${match.id}"></div>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
+        const toggle = div.querySelector('.match-detail-toggle');
+        const container2 = div.querySelector('.player-guesses-container');
+        toggle.addEventListener('click', () => { toggle.classList.toggle('expanded'); container2.classList.toggle('expanded'); });
+
+        // Wire up the guess buttons inside the match list card
+        const guessActions = div.querySelector('.guess-actions');
+        if (guessActions) {
+            guessActions.querySelectorAll('.guess-btn-mini').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    submitGuess(match.id, parseInt(this.dataset.points), this);
+                });
+            });
+        }
+
+        const guessList = div.querySelector('#guess-list-' + match.id);
+        if (matchGuesses.length === 0) {
+            guessList.innerHTML = '<p class="text-gray-500 text-center italic">Henüz tahmin yapılmamış</p>';
+        } else {
+            const sorted = [...matchGuesses].sort((a, b) => b.points - a.points || a.playerName.localeCompare(b.playerName));
+            guessList.innerHTML = sorted.map(g => {
+                let badge = '<span class="status-badge status-upcoming">Beklemede</span>';
+                if (match.played) {
+                    const ok = g.points === match.actualPoints;
+                    badge = '<span class="status-badge ' + (ok ? 'status-correct' : 'status-incorrect') + '">' + (ok ? 'Doğru' : 'Yanlış') + '</span>';
+                }
+                const isMe = currentPlayer && g.playerName === currentPlayer.name;
+                return '<div class="player-guess flex justify-between items-center py-1">' +
+                    '<div><span class="player-name ' + (isMe ? 'font-bold text-blue-600' : 'text-gray-700') + '">' + g.playerName + (isMe ? ' <span class="text-xs italic">(Sen)</span>' : '') + '</span></div>' +
+                    '<div class="flex items-center space-x-2"><span class="points-badge points-' + g.points + '">' + g.points + '</span>' + badge + '</div>' +
+                    '</div>';
+            }).join('');
+        }
+    });
+}
+
+function formatTurkishDate(dateStr) {
+    if (!dateStr) return '';
+    try {
+        const date = new Date(dateStr + 'T12:00:00');
+        return new Intl.DateTimeFormat('tr-TR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }).format(date);
+    } catch {
+        return dateStr;
+    }
+}
+
+function getTournamentBadge(tournament) {
+    const labels = { UCL: 'UCL', UEL: 'UEL', UECL: 'UECL' };
+    return '<span class="tournament-badge tournament-' + tournament.toLowerCase() + '">' + (labels[tournament] || tournament) + '</span>';
+}
+
+function getHomeAwayLabel(homeOrAway) {
+    if (homeOrAway === 'Home') {
+        return '<span class="home-icon font-bold" title="İç Saha">🏠 İç Saha</span>';
+    }
+    return '<span class="away-icon font-bold" title="Deplasman">✈️ Deplasman</span>';
+}
+
+function populateMatchesCarousel() {
+    const track = document.getElementById('carouselTrack');
+    if (!track) return;
+    track.innerHTML = '';
+    allMatches.forEach(match => {
+        const card = document.createElement('div');
+        card.className = 'carousel-item';
+        card.id = 'match-card-' + match.id;
+        const canGuess = currentPlayer && currentPlayer.canEdit && !match.played;
+        const teamClass = match.team === 'Galatasaray' ? 'team-gs' : match.team === 'Fenerbahçe' ? 'team-fb' : match.team === 'Beşiktaş' ? 'team-bjk' : 'team-ts';
+
+        const resultHTML = match.played
+            ? '<div class="mt-3 p-3 rounded-lg bg-green-50 border border-green-200"><p class="font-medium text-green-700">✅ Sonuç: <span class="font-bold">' + match.resultScore + '</span> — Kazanan: <span class="font-bold">' + match.actualPoints + ' puan</span></p></div>'
+            : '';
+
+        card.innerHTML = '<div class="card ' + teamClass + '" style="border-left-width:4px;">' +
+            // Prev league context (small, muted)
+            (match.prevLeagueContext ? '<p class="text-xs text-gray-400 mb-1">⬆ Önceki: ' + match.prevLeagueContext + '</p>' : '') +
+            // Main title: tournament badge + team name + vs + opponent + home/away inline
+            '<div class="flex items-center gap-2 flex-wrap mb-2">' +
+            getTournamentBadge(match.tournament) +
+            '<h3 class="text-xl font-bold text-gray-800">' + match.team + ' <span class="text-gray-400">vs</span> ' + match.opponent + '</h3>' +
+            '<span class="text-sm">' + getHomeAwayLabel(match.homeOrAway) + '</span>' +
+            '</div>' +
+            // Date
+            (match.matchDate ? '<p class="text-sm font-medium text-indigo-600 mb-1">📅 ' + formatTurkishDate(match.matchDate) + '</p>' : '') +
+            // Next league context (small, muted)
+            (match.nextLeagueContext ? '<p class="text-xs text-gray-400 mb-2">⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : '') +
+            resultHTML +
+            // Guess buttons
+            '<div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">' +
+            '<button data-points="0" class="guess-btn w-full py-2 px-4 rounded-lg shadow-md transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300' + ((!canGuess) ? ' cursor-not-allowed opacity-50' : '') + '"' + ((!canGuess) ? ' disabled' : '') + '>0 Puan</button>' +
+            '<button data-points="1" class="guess-btn w-full py-2 px-4 rounded-lg shadow-md transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300' + ((!canGuess) ? ' cursor-not-allowed opacity-50' : '') + '"' + ((!canGuess) ? ' disabled' : '') + '>1 Puan</button>' +
+            '<button data-points="3" class="guess-btn w-full py-2 px-4 rounded-lg shadow-md transition-colors bg-gray-200 text-gray-800 hover:bg-gray-300' + ((!canGuess) ? ' cursor-not-allowed opacity-50' : '') + '"' + ((!canGuess) ? ' disabled' : '') + '>3 Puan</button>' +
+            '</div></div>';
+        track.appendChild(card);
+        card.querySelectorAll('.guess-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (!canGuess) {
+                    if (!currentPlayer) showMessage('Lütfen önce davet kodunla giriş yap', 'error');
+                    else if (!currentPlayer.canEdit) showMessage('Tahmin süren doldu', 'error');
+                    else if (match.played) showMessage('Bu maç oynandı', 'error');
+                    return;
+                }
+                submitGuess(match.id, parseInt(this.dataset.points), this);
+            });
+        });
+    });
+    updateCarousel(true);
+    updateCarouselButtons();
+}
+
+function updateCarousel(instant) {
+    const track = document.getElementById('carouselTrack');
+    if (!track || !track.children.length) return;
+    const itemWidth = track.children[0].offsetWidth;
+    currentTranslate = -currentMatchIndex * itemWidth;
+    track.style.transition = instant ? 'none' : 'transform 0.3s ease-in-out';
+    track.style.transform = 'translateX(' + currentTranslate + 'px)';
+    const ind = document.getElementById('carouselIndicator');
+    if (ind) ind.textContent = (currentMatchIndex + 1) + ' / ' + allMatches.length;
+    updateCarouselButtons();
+    highlightSelectedGuess();
+}
+
+function updateCarouselButtons() {
+    const prev = document.getElementById('prevMatchButton');
+    const next = document.getElementById('nextMatchButton');
+    if (prev) prev.classList.toggle('disabled', currentMatchIndex === 0);
+    if (next) next.classList.toggle('disabled', currentMatchIndex === allMatches.length - 1);
+}
+
+function highlightSelectedGuess() {
+    if (!currentPlayer) return;
+    const match = allMatches[currentMatchIndex];
+    if (!match) return;
+    const card = document.getElementById('match-card-' + match.id);
+    if (!card) return;
+    const myGuess = allGuesses.find(g => g.matchId === match.id && g.playerName === currentPlayer.name);
+    card.querySelectorAll('.guess-btn').forEach(btn => {
+        const pts = parseInt(btn.dataset.points);
+        btn.classList.remove('bg-blue-400', 'bg-green-500', 'bg-red-500');
+        btn.classList.add('bg-gray-200', 'text-gray-800');
+        if (match.played) {
+            if (pts === match.actualPoints) {
+                btn.classList.remove('bg-gray-200', 'text-gray-800', 'opacity-50');
+                btn.classList.add('bg-green-500', 'text-white');
+            }
+            if (myGuess && pts === myGuess.points && pts !== match.actualPoints) {
+                btn.classList.remove('bg-gray-200', 'text-gray-800', 'opacity-50');
+                btn.classList.add('bg-red-500', 'text-white');
+            }
+        } else {
+            if (myGuess && pts === myGuess.points) {
+                btn.classList.remove('bg-gray-200', 'text-gray-800');
+                btn.classList.add('bg-blue-400', 'text-white');
+            }
+        }
+    });
+}
+
+// ============================================================
+// VIEWS
+// ============================================================
+function showView(view) {
+    document.getElementById('tokenInputView').classList.add('hidden');
+    document.getElementById('scoreboardView').classList.add('hidden');
+    document.getElementById('gameCarouselView').classList.add('hidden');
+    document.getElementById('matchListView').classList.add('hidden');
+    if (view === 'tokenInput') {
+        document.getElementById('tokenInputView').classList.remove('hidden');
+    } else if (view === 'scoreboard') {
+        document.getElementById('scoreboardView').classList.remove('hidden');
+        renderLeaderboard();
+    } else if (view === 'matchList') {
+        document.getElementById('matchListView').classList.remove('hidden');
+        populateMatchList('all');
+    } else if (view === 'gameCarousel') {
+        document.getElementById('gameCarouselView').classList.remove('hidden');
+        populateMatchesCarousel();
+    }
+}
+
+function showLoading(show) {
+    const loading = document.getElementById('loadingIndicator');
+    if (loading) loading.classList.toggle('hidden', !show);
+}
+
+function showMessage(text, type) {
+    const box = document.getElementById('messageBox');
+    box.textContent = text;
+    box.style.backgroundColor = type === 'error' ? '#EF4444' : '#10B981';
+    box.classList.remove('scale-0');
+    setTimeout(() => box.classList.add('scale-0'), 3000);
+}
+
+function padArray(arr, len, fill) {
+    while (arr.length < len) arr.push(fill);
+    return arr.slice(0, len);
+}
+
+window.onload = () => initApp();
+</script>
+</body>
+</html>

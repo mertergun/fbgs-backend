@@ -1,0 +1,31 @@
+# Environment variables — NEVER commit this
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Data (SQLite — no longer used, but keep out of git just in case)
+data/
+
+# Package lock (we use package-lock.json but not yarn.lock)
+yarn.lock
