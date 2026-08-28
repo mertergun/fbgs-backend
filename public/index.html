@@ -30,7 +30,6 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-        .leaderboard-bg { background: linear-gradient(135deg, #f3f4f6, #e5e7eb); }
         .status-icon {
             display: inline-block;
             width: 0.8rem;
@@ -71,6 +70,49 @@
         .team-fb { border-left: 4px solid #FFE000; }
         .team-bjk { border-left: 4px solid #000000; }
         .team-ts { border-left: 4px solid #8B0000; }
+
+        /* Compact team summary cards */
+        #teamSummaryRow {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+        @media (min-width: 768px) {
+            #teamSummaryRow {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        .team-card {
+            background: var(--bg-card);
+            border-radius: 0.75rem;
+            padding: 0.75rem;
+            border-left: 4px solid;
+            box-shadow: var(--shadow);
+        }
+
+        /* Leaderboard team result dots */
+        .team-result-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+        }
+        .team-result-item {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.75rem;
+        }
+        .dot-legend {
+            display: flex;
+            gap: 0.2rem;
+        }
+        .dot-legend .status-icon {
+            width: 0.65rem;
+            height: 0.65rem;
+            border-radius: 50%;
+            border: 1px solid rgba(0,0,0,0.1);
+            flex-shrink: 0;
+        }
 
         .tournament-badge {
             display: inline-flex;
@@ -263,8 +305,6 @@
             box-shadow: var(--shadow);
             transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
         }
-        .leaderboard-bg { background: linear-gradient(135deg, var(--bg-card-muted), var(--bg-elevated)); }
-
         html.dark .text-gray-800 { color: var(--text-primary) !important; }
         html.dark .text-gray-700 { color: var(--text-secondary) !important; }
         html.dark .text-gray-600 { color: var(--text-muted) !important; }
@@ -286,6 +326,17 @@
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
+
+        html.dark .team-card {
+            background: var(--bg-card);
+            box-shadow: var(--shadow);
+        }
+        html.dark .team-result-grid .team-result-item {
+            color: var(--text-secondary);
+        }
+        html.dark .team-result-grid .text-green-600 { color: #4ade80 !important; }
+        html.dark .team-result-grid .text-indigo-500 { color: #818cf8 !important; }
+        html.dark .dot-legend .status-icon { border-color: rgba(255,255,255,0.1); }
 
         /* Form inputs */
         html.dark input[type="text"] {
@@ -367,6 +418,29 @@
         }
         .theme-toggle:hover { transform: scale(1.05); }
         .theme-toggle svg { width: 1.25rem; height: 1.25rem; }
+
+        /* Ghost / outline button (for secondary actions) */
+        .btn-ghost {
+            background: transparent;
+            color: #4f46e5;
+            border: 2px solid #4f46e5;
+            font-weight: 700;
+            padding: 0.5rem 1.25rem;
+            border-radius: 0.5rem;
+            transition: all 0.15s ease;
+        }
+        .btn-ghost:hover {
+            background: #4f46e5;
+            color: white;
+        }
+        html.dark .btn-ghost {
+            color: #818cf8;
+            border-color: #818cf8;
+        }
+        html.dark .btn-ghost:hover {
+            background: #818cf8;
+            color: #0f172a;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
@@ -378,12 +452,12 @@
 </button>
 
 <div class="container">
-    <header class="text-center my-8">
-        <h1 class="text-4xl font-bold gradient-text">Avrupa'da Türk Takımları</h1>
-        <p class="mt-2 text-gray-600">2026/27 Sezonu • UCL • UEL • UECL — Puanlarını tahmin et, en yüksek skoru al!</p>
-        <div id="playerNameDisplay" class="text-xl font-bold text-gray-800 mt-4 hidden"></div>
-        <div id="editUntilBanner" class="mt-2 text-sm text-amber-700 bg-amber-100 inline-block px-3 py-1 rounded-full hidden"></div>
-        <div id="expiredBanner" class="mt-2 text-sm text-red-700 bg-red-100 inline-block px-3 py-1 rounded-full hidden"></div>
+    <header class="flex items-center justify-between mb-6 mt-2">
+        <h1 class="text-3xl font-bold gradient-text">Avrupa'da Türk Takımları</h1>
+        <div class="flex items-center gap-3">
+            <div id="editUntilBanner" class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full hidden"></div>
+            <div id="expiredBanner" class="text-xs font-semibold bg-red-100 text-red-800 px-3 py-1 rounded-full hidden"></div>
+        </div>
     </header>
 
     <main class="space-y-6">
@@ -397,17 +471,17 @@
         </div>
 
         <!-- Scoreboard View -->
-        <div id="scoreboardView" class="card leaderboard-bg hidden">
+        <div id="scoreboardView" class="card hidden">
             <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
                 <h2 class="text-2xl font-bold text-gray-800">Puan Durumu</h2>
                 <div class="flex space-x-2">
-                    <button id="viewMatchListButton" class="bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-indigo-700 transition-colors text-sm">Maç Listesi</button>
-                    <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
+                    <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
+                    <button id="viewMatchListButton" class="btn-ghost text-sm">Maç Listesi</button>
                 </div>
             </div>
 
             <!-- Team summary cards -->
-            <div id="teamSummaryRow" class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6"></div>
+            <div id="teamSummaryRow" class="mb-6"></div>
 
             <!-- Leaderboard table -->
             <div id="loadingIndicator" class="flex justify-center items-center py-8 hidden">
@@ -436,7 +510,7 @@
         </div>
 
         <!-- Match List View -->
-        <div id="matchListView" class="card leaderboard-bg hidden">
+        <div id="matchListView" class="card hidden">
             <!-- Header row: title + top back button -->
             <div class="flex justify-between items-center flex-wrap gap-2 mb-3">
                 <h2 class="text-2xl font-bold text-gray-800">Maç Listesi</h2>
@@ -639,22 +713,19 @@ function validateToken(token) {
             const newUrl = window.location.pathname + '?token=' + token;
             window.history.replaceState({}, '', newUrl);
 
-            // Update UI
-            const nameDisplay = document.getElementById('playerNameDisplay');
-            nameDisplay.textContent = 'Tahmin Yapıyorsun: ' + currentPlayer.name;
-            nameDisplay.classList.remove('hidden');
-
-            // Edit until banner
+            // Edit until banner (compact badge in header)
             if (currentPlayer.editUntil) {
                 const banner = document.getElementById('editUntilBanner');
                 if (currentPlayer.canEdit) {
-                    banner.textContent = 'Tahmin süresi: ' + new Date(currentPlayer.editUntil).toLocaleDateString('tr-TR') + ' tarihine kadar';
+                    const d = new Date(currentPlayer.editUntil);
+                    const fmt = d.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
+                    banner.textContent = 'Tahmin: ' + fmt;
                     banner.classList.remove('hidden');
                     document.getElementById('expiredBanner').classList.add('hidden');
                 } else {
                     banner.classList.add('hidden');
                     const expiredBanner = document.getElementById('expiredBanner');
-                    expiredBanner.textContent = 'Tahmin süren doldu - sadece görüntüleyebilirsin';
+                    expiredBanner.textContent = 'Tahmin süresi doldu';
                     expiredBanner.classList.remove('hidden');
                 }
             }
@@ -994,19 +1065,17 @@ function renderLeaderboard() {
                 const m = played.find(m => m.id === g.matchId);
                 return sum + (g.points === m.actualPoints ? g.points : 0);
             }, 0);
-        const pct = maxPoss > 0 ? Math.round((earned / maxPoss) * 100) : 0;
         return `
-            <div class="p-3 rounded-lg border-l-4 bg-white" style="border-left-color:${meta.color}">
+            <div class="team-card" style="border-left-color:${meta.color}">
                 <div class="flex items-center justify-between mb-1">
                     <span class="font-bold text-sm ${meta.textClass}">${team}</span>
                     ${teamMatches[0] ? '<span class="tournament-badge tournament-' + teamMatches[0].tournament.toLowerCase() + '">' + teamMatches[0].tournament + '</span>' : ''}
                 </div>
-                <div class="text-2xl font-extrabold text-gray-800">${earned}<span class="text-sm text-gray-500 font-normal">/${maxPoss}</span></div>
-                <div class="text-xs text-gray-500 mt-1">${played.length}/${teamMatches.length} oynandı</div>
-                <div class="text-xs text-gray-400">Maks: ${totalMax} puan</div>
-                <div class="mt-2 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                    <div class="h-full" style="width:${pct}%; background-color:${meta.color}"></div>
+                <div class="flex items-baseline gap-1">
+                    <span class="text-xl font-extrabold text-gray-800">${earned}</span>
+                    <span class="text-sm text-gray-400">/${maxPoss}</span>
                 </div>
+                <div class="text-xs text-gray-500">${played.length}/${teamMatches.length} oynandı · Maks ${totalMax} puan</div>
             </div>
         `;
     }).join('');
@@ -1084,13 +1153,16 @@ function renderLeaderboard() {
         const teamBreakdown = SCOREBOARD_TEAMS.map(team => {
             const meta = TEAM_META[team];
             const teamCount = allMatches.filter(m => m.team === team).length;
-            const icons = padArray(p.icons[team], teamCount, 'tbd').map(s => '<div class="status-icon ' + s + '"></div>').join('');
-            return '<div class="flex items-center flex-wrap gap-1 text-xs">' +
-                '<span class="font-bold ' + meta.textClass + ' w-8">' + meta.short + ':</span>' +
+            const iconDots = padArray(p.icons[team], teamCount, 'tbd').map(s => {
+                const label = s === 'correct' ? 'Doğru' : s === 'incorrect' ? 'Yanlış' : 'Bekliyor';
+                return '<div class="status-icon ' + s + '" title="' + label + '"></div>';
+            }).join('');
+            return '<div class="team-result-item">' +
+                '<span class="font-bold ' + meta.textClass + ' w-7 shrink-0">' + meta.short + ':</span>' +
                 '<span class="font-bold text-green-600">' + p.earned[team] + '</span>' +
                 '<span class="text-gray-400">/</span>' +
                 '<span class="font-bold text-indigo-500">' + p.projected[team] + '</span>' +
-                '<div class="flex items-center ml-1">' + icons + '</div>' +
+                '<div class="dot-legend">' + iconDots + '</div>' +
                 '</div>';
         }).join('');
 
@@ -1120,13 +1192,19 @@ function renderLeaderboard() {
                     </div>
                 </div>
             </div>
+            <div class="flex items-center gap-4 text-xs text-gray-500 mb-1">
+                <span class="flex items-center gap-1"><span class="w-3 h-2 rounded-sm bg-green-500 inline-block"></span> Kazanılan</span>
+                <span class="flex items-center gap-1"><span class="w-3 h-2 rounded-sm bg-indigo-400 inline-block"></span> Projeksiyon</span>
+                <span class="flex items-center gap-1 text-gray-400">ⓘ Kazanılan, Projeksiyon içindeki gerçekleşen payı gösterir</span>
+            </div>
             <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-3" title="Kazanılan: ${earnedTotal} • Projeksiyon: ${projectedTotal}">
                 <div class="absolute inset-y-0 left-0 bg-green-500" style="width:${earnedWidth}%"></div>
                 <div class="absolute inset-y-0 bg-indigo-400" style="left:${earnedWidth}%; width:${unearnedWidth}%"></div>
             </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 mt-3">
+            <div class="team-result-grid mt-3">
                 ${teamBreakdown}
             </div>
+            <div class="text-xs text-gray-400 mt-2">○ Bekliyor · ✓ Doğru · ✗ Yanlış</div>
         `;
         listContainer.appendChild(div);
     });
