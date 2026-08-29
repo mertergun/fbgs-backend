@@ -1124,25 +1124,19 @@ function renderLeaderboard() {
     });
 
     const players = Object.values(playerMap).sort((a, b) => {
-        const aTotal = Object.values(a.earned).reduce((s, v) => s + v, 0);
-        const bTotal = Object.values(b.earned).reduce((s, v) => s + v, 0);
-        if (bTotal !== aTotal) return bTotal - aTotal;
+        const aEarned = Object.values(a.earned).reduce((s, v) => s + v, 0);
+        const bEarned = Object.values(b.earned).reduce((s, v) => s + v, 0);
+        if (bEarned !== aEarned) return bEarned - aEarned;
+        // Tiebreaker: total guessed points (projeksiyon)
+        const aProjected = Object.values(a.projected).reduce((s, v) => s + v, 0);
+        const bProjected = Object.values(b.projected).reduce((s, v) => s + v, 0);
+        if (bProjected !== aProjected) return bProjected - aProjected;
         return a.name.localeCompare(b.name);
     });
 
-    // Bar chart scale = max total projeksiyon across all players
-    const maxProjected = Math.max(...players.map(p =>
-        Object.values(p.projected).reduce((s, v) => s + v, 0)
-    ), 1);
-
     listContainer.innerHTML = '';
     players.forEach((p, i) => {
-        const earnedTotal    = Object.values(p.earned).reduce((s, v) => s + v, 0);
-        const projectedTotal = Object.values(p.projected).reduce((s, v) => s + v, 0);
-        const totalMaxAll    = Object.values(p.totalMax).reduce((s, v) => s + v, 0);
-
-        const projectedWidth = (projectedTotal / maxProjected) * 100;
-        const earnedWidth    = projectedTotal > 0 ? (earnedTotal / projectedTotal) * projectedWidth : 0;
+        const earnedTotal = Object.values(p.earned).reduce((s, v) => s + v, 0);
 
         let trophy = '';
         if (i === 0) trophy = '<span class="ml-2 text-yellow-500">🏆</span>';
@@ -1179,27 +1173,13 @@ function renderLeaderboard() {
                 </div>
                 <div class="flex items-center space-x-4 text-sm">
                     <div>
-                        <div class="text-xs text-gray-500">Kazanılan</div>
+                        <div class="text-xs text-gray-500">Doğru tahmin sayısı</div>
                         <div class="text-2xl font-extrabold text-green-600">${earnedTotal}</div>
-                    </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Projeksiyon</div>
-                        <div class="text-2xl font-extrabold text-indigo-600">${projectedTotal}</div>
-                    </div>
-                    <div>
-                        <div class="text-xs text-gray-500">Maks</div>
-                        <div class="text-2xl font-extrabold text-gray-400">${totalMaxAll}</div>
                     </div>
                 </div>
             </div>
-            <div class="flex items-center gap-4 text-xs text-gray-500 mb-1">
-                <span class="flex items-center gap-1"><span class="w-3 h-2 rounded-sm bg-green-500 inline-block"></span> Kazanılan</span>
-                <span class="flex items-center gap-1"><span class="w-3 h-2 rounded-sm bg-indigo-400 inline-block"></span> Projeksiyon</span>
-                <span class="flex items-center gap-1 text-gray-400">ⓘ Kazanılan, Projeksiyon içindeki gerçekleşen payı gösterir</span>
-            </div>
-            <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden mb-3" title="Kazanılan: ${earnedTotal} • Projeksiyon: ${projectedTotal}">
-                <div class="absolute inset-y-0 left-0 bg-green-500" style="width:${earnedWidth}%"></div>
-                <div class="absolute inset-y-0 bg-indigo-400" style="left:${earnedWidth}%; width:${unearnedWidth}%"></div>
+            <div class="text-xs text-gray-500 italic mt-1 mb-2">
+                Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer
             </div>
             <div class="team-result-grid mt-3">
                 ${teamBreakdown}
