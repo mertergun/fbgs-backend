@@ -1437,22 +1437,24 @@ function populateMatchList(filter) {
         }
 
         const guessList = div.querySelector('#guess-list-' + match.id);
-        if (matchGuesses.length === 0) {
-            guessList.innerHTML = '<p class="text-gray-500 text-center italic">Henüz tahmin yapılmamış</p>';
-        } else {
-            const sorted = [...matchGuesses].sort((a, b) => b.points - a.points || a.playerName.localeCompare(b.playerName));
-            guessList.innerHTML = sorted.map(g => {
-                let badge = '<span class="status-badge status-upcoming">Beklemede</span>';
-                if (match.played) {
-                    const ok = g.points === match.actualPoints;
-                    badge = '<span class="status-badge ' + (ok ? 'status-correct' : 'status-incorrect') + '">' + (ok ? 'Doğru' : 'Yanlış') + '</span>';
-                }
-                const isMe = currentPlayer && g.playerName === currentPlayer.name;
-                return '<div class="player-guess flex justify-between items-center py-1">' +
-                    '<div><span class="player-name ' + (isMe ? 'font-bold text-blue-600' : 'text-gray-700') + '">' + g.playerName + (isMe ? ' <span class="text-xs italic">(Sen)</span>' : '') + '</span></div>' +
-                    '<div class="flex items-center space-x-2"><span class="points-badge points-' + g.points + '">' + g.points + '</span>' + badge + '</div>' +
-                    '</div>';
-            }).join('');
+        if (guessList) {
+            if (matchGuesses.length === 0) {
+                guessList.innerHTML = '<p class="text-gray-500 text-center italic">Henüz tahmin yapılmamış</p>';
+            } else {
+                const sorted = [...matchGuesses].sort((a, b) => b.points - a.points || a.playerName.localeCompare(b.playerName));
+                guessList.innerHTML = sorted.map(g => {
+                    let badge = '<span class="status-badge status-upcoming">Beklemede</span>';
+                    if (match.played) {
+                        const ok = g.points === match.actualPoints;
+                        badge = '<span class="status-badge ' + (ok ? 'status-correct' : 'status-incorrect') + '">' + (ok ? 'Doğru' : 'Yanlış') + '</span>';
+                    }
+                    const isMe = currentPlayer && g.playerName === currentPlayer.name;
+                    return '<div class="player-guess flex justify-between items-center py-1">' +
+                        '<div><span class="player-name ' + (isMe ? 'font-bold text-blue-600' : 'text-gray-700') + '">' + g.playerName + (isMe ? ' <span class="text-xs italic">(Sen)</span>' : '') + '</span></div>' +
+                        '<div class="flex items-center space-x-2"><span class="points-badge points-' + g.points + '">' + g.points + '</span>' + badge + '</div>' +
+                        '</div>';
+                }).join('');
+            }
         }
     });
 }
