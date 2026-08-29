@@ -203,20 +203,20 @@ app.get('/api/matches', async (req, res) => {
     res.json(matches.map(m => {
       const isLocked = matchIsLocked.get(m.id);
       const guesses = roomGuesses[m.id] || [];
-      // Build guesses array: only show non-locked guesses, or show all if locked
-      let otherGuesses = [];
+      // Blind guessing: if not locked, other players' guesses are completely hidden server-side.
+      // Only the requesting player's own guess is ever revealed to them.
+      let otherGuessCount = null;
       if (isLocked || m.played) {
-        // Blind guessing off — show all other guesses (anonymized)
-        otherGuesses = guesses
-          .filter(g => playerId && g.playerId !== playerId)
-          .map(g => ({ points: g.points }));
+        // Reveal only when locked or played
+        otherGuessCount = guesses.filter(g => playerId && g.playerId !== playerId).length;
       }
-      // else: blind guessing on — don't show other players' guesses
+      // Player's own guess is always visible to them (never hidden server-side)
+      const userGuess = playerId ? (userGuessMap.get(m.id) ?? null) : null;
       return {
         ...formatMatch(m),
         isLocked: Boolean(isLocked),
-        userGuess: playerId ? (userGuessMap.get(m.id) || null) : null,
-        otherGuessCount: otherGuesses.length
+        userGuess,
+        otherGuessCount
       };
     }));
   } catch (err) {
@@ -301,18 +301,21 @@ app.get('/api/guesses', async (req, res) => {
 });
 
 // POST /api/rooms/join - Add a player to a room
+// Body: { user_id: <player invite_token>, invite_token: <room invite_token> }
 app.post('/api/rooms/join', async (req, res) => {
   try {
-    const { invite_token, room_invite_token } = req.body;
-    if (!invite_token || !room_invite_token) {
-      return res.status(400).json({ error: 'invite_token and room_invite_token required' });
+    // Accept both naming conventions for compatibility
+    const user_id = req.body.user_id || req.body.invite_token; // backwards compat
+    const invite_token = req.body.invite_token || req.body.room_invite_token;
+    if (!user_id || !invite_token) {
+      return res.status(400).json({ error: 'user_id and invite_token required' });
     }
 
-    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [invite_token]);
+    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [user_id]);
     if (playerResult.rows.length === 0) {
       return res.status(401).json({ error: 'Geçersiz davet kodu. Lütfen yöneticinle iletişime geç.' });
     }
-    const roomResult = await pool.query('SELECT id, name FROM rooms WHERE invite_token = $1', [room_invite_token]);
+    const roomResult = await pool.query('SELECT id, name FROM rooms WHERE invite_token = $1', [invite_token]);
     if (roomResult.rows.length === 0) {
       return res.status(404).json({ error: 'Oda kodu bulunamadı. Lütfen doğru kodu girdiğinden emin ol.' });
     }
@@ -321,7 +324,7 @@ app.post('/api/rooms/join', async (req, res) => {
       'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [roomResult.rows[0].id, playerResult.rows[0].id]
     );
-    res.json({ success: true, roomName: roomResult.rows[0].name, room: { id: roomResult.rows[0].id, name: roomResult.rows[0].name, inviteToken: room_invite_token } });
+    res.json({ success: true, roomName: roomResult.rows[0].name, room: { id: roomResult.rows[0].id, name: roomResult.rows[0].name, inviteToken: invite_token } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

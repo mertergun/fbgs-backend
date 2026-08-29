@@ -821,7 +821,7 @@ function joinRoom(playerToken, roomInviteToken) {
     return fetch(API_BASE + '/api/rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invite_token: playerToken, room_invite_token: roomInviteToken })
+        body: JSON.stringify({ user_id: playerToken, invite_token: roomInviteToken })
     }).then(r => r.json());
 }
 
@@ -1376,8 +1376,7 @@ function populateMatchList(filter) {
                 <div class="flex-1">
                     <div class="flex items-center gap-2 flex-wrap mb-1">
                         ${getTournamentBadge(match.tournament)}
-                        <h3 class="text-md font-bold text-gray-800">${match.team} <span class="text-gray-400">vs</span> ${match.opponent}</h3>
-                        <span class="text-sm">${getHomeAwayLabel(match.homeOrAway)}</span>
+                        <h3 class="text-md font-bold text-gray-800">${match.team} <span class="text-gray-400">vs</span> ${match.opponent} <span class="text-sm ${match.homeOrAway === 'Home' ? 'home-icon' : 'away-icon'} font-bold ml-1">${getHomeAwayBadge(match.homeOrAway)}</span></h3>
                     </div>
                     <p class="text-xs text-gray-500 mt-1">
                         ${match.matchDate ? '📅 ' + formatTurkishDate(match.matchDate) : ''}
@@ -1476,11 +1475,12 @@ function getTournamentBadge(tournament) {
     return '<span class="tournament-badge tournament-' + tournament.toLowerCase() + '">' + (labels[tournament] || tournament) + '</span>';
 }
 
-function getHomeAwayLabel(homeOrAway) {
+// Returns the emoji + "Home" or "Away" inline, next to opponent
+function getHomeAwayBadge(homeOrAway) {
     if (homeOrAway === 'Home') {
-        return '<span class="home-icon font-bold" title="İç Saha">🏠 İç Saha</span>';
+        return '🏠 İç Saha';
     }
-    return '<span class="away-icon font-bold" title="Deplasman">✈️ Deplasman</span>';
+    return '✈️ Deplasman';
 }
 
 function populateMatchesCarousel() {
@@ -1504,8 +1504,7 @@ function populateMatchesCarousel() {
             // Main title: tournament badge + team name + vs + opponent + home/away inline + lock badge
             '<div class="flex items-center gap-2 flex-wrap mb-2">' +
             getTournamentBadge(match.tournament) +
-            '<h3 class="text-xl font-bold text-gray-800">' + match.team + ' <span class="text-gray-400">vs</span> ' + match.opponent + '</h3>' +
-            '<span class="text-sm">' + getHomeAwayLabel(match.homeOrAway) + '</span>' +
+            '<h3 class="text-xl font-bold text-gray-800">' + match.team + ' <span class="text-gray-400">vs</span> ' + match.opponent + ' <span class="text-sm ' + (match.homeOrAway === 'Home' ? 'home-icon' : 'away-icon') + ' font-bold ml-1">' + getHomeAwayBadge(match.homeOrAway) + '</span></h3>' +
             '<span class="lock-icon ' + (match.isLocked ? 'locked' : 'unlocked') + '" title="' + (match.isLocked ? 'Tahminler kilitli' : 'Tahminler açık') + '">' +
             (match.isLocked ? '🔒' : '🔓') + ' ' + (match.isLocked ? 'Kilitli' : 'Açık') + '</span>' +
             '</div>' +
