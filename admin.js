@@ -75,14 +75,19 @@ async function listRooms() {
   console.log();
 }
 
-async function addPlayer(name, editUntil) {
+async function addPlayer(name, editUntil, roomId) {
   const expires = editUntil || DEFAULT_EDIT_UNTIL;
   const data = await apiFetch('/api/admin/players', {
     method: 'POST',
-    body: JSON.stringify({ name, editUntil: expires })
+    body: JSON.stringify({ name, editUntil: expires, roomId: roomId ?? null })
   });
   console.log(`\n✓ Created player: ${name}`);
   console.log(`  Edit until: ${expires}`);
+  if (data.player.room) {
+    console.log(`  Room: ${data.player.room.name} (id:${data.player.room.id}, ${data.player.room.inviteToken})`);
+  } else {
+    console.log(`  Room: (none — player will need a room invite code to join)`);
+  }
   console.log(`  Invite URL: ${data.player.inviteUrl}\n`);
   return data.player;
 }
@@ -128,7 +133,8 @@ function displayPlayers(players) {
   players.forEach(p => {
     const status = p.is_active ? '✓' : '✗';
     const expired = p.edit_until && new Date(p.edit_until) < new Date() ? ' (EXPIRED)' : '';
-    console.log(`  ${status} [${p.id}] ${String(p.name).padEnd(20)} Token: ${p.invite_token}${expired}`);
+    const roomTag = p.room ? ` 🏠 ${p.room.name}` : ' (no room)';
+    console.log(`  ${status} [${p.id}] ${String(p.name).padEnd(20)} Token: ${p.invite_token}${expired}${roomTag}`);
     console.log(`       ${API_BASE}/?token=${p.invite_token}`);
   });
   console.log();
@@ -145,6 +151,15 @@ function askConfirmation(question) {
 }
 
 function parseAddPlayerArgs(args) {
+  // Optional trailing --room <id> or -r <id> flag
+  let roomId = null;
+  const roomFlag = args.match(/\s(--room|-r)\s+(\S+)\s*$/);
+  if (roomFlag) {
+    roomId = parseInt(roomFlag[2]);
+    if (isNaN(roomId)) roomId = roomFlag[2]; // accept name too
+    args = args.replace(roomFlag[0], '').trim();
+  }
+  // Optional trailing YYYY-MM-DD
   const dateMatch = args.match(/(\d{4}-\d{2}-\d{2})$/);
   let name = args;
   let editUntil = DEFAULT_EDIT_UNTIL;
@@ -152,7 +167,7 @@ function parseAddPlayerArgs(args) {
     name = args.replace(dateMatch[0], '').trim();
     editUntil = dateMatch[1];
   }
-  return { name, editUntil };
+  return { name, editUntil, roomId };
 }
 
 async function main() {
@@ -165,7 +180,7 @@ async function main() {
   console.log('  set <id> <score> <pts>  - Set match result (pts: 0/1/3)');
   console.log('  lock <id>             - Lock a match (reveal guesses)');
   console.log('  players               - Show all players + invite URLs');
-  console.log('  addplayer <name> [date]  - Create player (date: YYYY-MM-DD, default: ' + DEFAULT_EDIT_UNTIL + ')');
+  console.log('  addplayer <name> [date] [--room <id>] - Create player; optional --room <id> assigns to that room (default: first room)');
   console.log('  removeplayer <id>     - Delete player (and their guesses)');
   console.log('  rooms                 - List all rooms + invite URLs');
   console.log('  addroom <name>        - Create a new room');
@@ -268,9 +283,9 @@ async function main() {
         console.log('  Example: addplayer Mert 2026-09-20');
         continue;
       }
-      const { name, editUntil } = parseAddPlayerArgs(afterCmd);
+      const { name, editUntil, roomId } = parseAddPlayerArgs(afterCmd);
       try {
-        await addPlayer(name, editUntil);
+        await addPlayer(name, editUntil, roomId);
       } catch (e) {
         console.log('Error:', e.message);
       }

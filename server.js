@@ -460,9 +460,11 @@ function requireAdmin(req, res, next) {
 }
 
 // POST /api/admin/players - Create a new player with invite token
+// Body: { name, editUntil?, roomId? }
+//   - roomId: optional room ID; if omitted, falls back to the first/default room
 app.post('/api/admin/players', requireAdmin, async (req, res) => {
   try {
-    const { name, editUntil } = req.body;
+    const { name, editUntil, roomId } = req.body;
     if (!name) return res.status(400).json({ error: 'name required' });
 
     const inviteToken = generateToken();
@@ -472,16 +474,53 @@ app.post('/api/admin/players', requireAdmin, async (req, res) => {
       'INSERT INTO players (name, invite_token, edit_until) VALUES ($1, $2, $3) RETURNING id',
       [name, inviteToken, expiresAt]
     );
+    const playerId = result.rows[0].id;
+
+    // Assign player to a room: explicit roomId wins; otherwise the first available room
+    let assignedRoom = null;
+    try {
+      if (roomId !== undefined && roomId !== null && roomId !== '') {
+        const roomCheck = await pool.query('SELECT id, name, invite_token FROM rooms WHERE id = $1', [roomId]);
+        if (roomCheck.rows.length > 0) {
+          await pool.query(
+            'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [roomCheck.rows[0].id, playerId]
+          );
+          assignedRoom = {
+            id: roomCheck.rows[0].id,
+            name: roomCheck.rows[0].name,
+            inviteToken: roomCheck.rows[0].invite_token
+          };
+        }
+      } else {
+        // Default: first room
+        const defaultRoom = await pool.query('SELECT id, name, invite_token FROM rooms ORDER BY id LIMIT 1');
+        if (defaultRoom.rows.length > 0) {
+          await pool.query(
+            'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+            [defaultRoom.rows[0].id, playerId]
+          );
+          assignedRoom = {
+            id: defaultRoom.rows[0].id,
+            name: defaultRoom.rows[0].name,
+            inviteToken: defaultRoom.rows[0].invite_token
+          };
+        }
+      }
+    } catch (roomErr) {
+      console.error('Failed to assign player to room:', roomErr.message);
+    }
 
     const player = {
-      id: result.rows[0].id,
+      id: playerId,
       name,
       inviteToken,
       editUntil: expiresAt,
-      inviteUrl: `${BASE_URL}/?token=${inviteToken}`
+      inviteUrl: `${BASE_URL}/?token=${inviteToken}`,
+      room: assignedRoom
     };
 
-    console.log(`Created player: ${name} → ${player.inviteUrl}`);
+    console.log(`Created player: ${name} → ${player.inviteUrl}${assignedRoom ? ' (room: ' + assignedRoom.name + ')' : ''}`);
     res.status(201).json({ player });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -491,7 +530,14 @@ app.post('/api/admin/players', requireAdmin, async (req, res) => {
 // GET /api/admin/players - List all players
 app.get('/api/admin/players', requireAdmin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM players ORDER BY name');
+    const result = await pool.query(
+      `SELECT p.*,
+              r.id as room_id, r.name as room_name, r.invite_token as room_invite_token
+       FROM players p
+       LEFT JOIN room_players rp ON rp.player_id = p.id
+       LEFT JOIN rooms r ON r.id = rp.room_id
+       ORDER BY p.name`
+    );
     res.json(result.rows.map(r => ({
       id: r.id,
       name: r.name,
@@ -499,7 +545,12 @@ app.get('/api/admin/players', requireAdmin, async (req, res) => {
       editUntil: r.edit_until,
       isActive: Boolean(r.is_active),
       createdAt: r.created_at,
-      inviteUrl: `${BASE_URL}/?token=${r.invite_token}`
+      inviteUrl: `${BASE_URL}/?token=${r.invite_token}`,
+      room: r.room_id ? {
+        id: r.room_id,
+        name: r.room_name,
+        inviteToken: r.room_invite_token
+      } : null
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
