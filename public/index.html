@@ -1422,7 +1422,9 @@ function populateMatchList(filter) {
         container.appendChild(div);
         const toggle = div.querySelector('.match-detail-toggle');
         const container2 = div.querySelector('.player-guesses-container');
-        toggle.addEventListener('click', () => { toggle.classList.toggle('expanded'); container2.classList.toggle('expanded'); });
+        if (toggle && container2) {
+            toggle.addEventListener('click', () => { toggle.classList.toggle('expanded'); container2.classList.toggle('expanded'); });
+        }
 
         // Wire up the guess buttons inside the match list card
         const guessActions = div.querySelector('.guess-actions');
