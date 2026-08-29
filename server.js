@@ -97,7 +97,8 @@ app.get('/api/invite/:token', async (req, res) => {
         room: {
           id: room.id,
           name: room.name,
-          inviteToken: room.invite_token
+          inviteToken: room.invite_token,
+          isLocked: Boolean(room.is_locked)
         },
         members: members.rows.map(m => ({ id: m.id, name: m.name, joinedAt: m.joined_at })),
         inviteUrl: `${BASE_URL}/?token=${room.invite_token}`
@@ -114,7 +115,7 @@ app.get('/api/invite/:token', async (req, res) => {
 
     // Find the player's room(s)
     const roomsResult = await pool.query(
-      `SELECT r.id, r.name, r.invite_token
+      `SELECT r.id, r.name, r.invite_token, r.is_locked
        FROM room_players rp JOIN rooms r ON r.id = rp.room_id
        WHERE rp.player_id = $1`,
       [player.id]
@@ -130,7 +131,9 @@ app.get('/api/invite/:token', async (req, res) => {
         canEdit,
         expired: !!expired
       },
-      rooms: roomsResult.rows.map(r => ({ id: r.id, name: r.name, inviteToken: r.invite_token })),
+      rooms: roomsResult.rows.map(r => ({
+        id: r.id, name: r.name, inviteToken: r.invite_token, isLocked: Boolean(r.is_locked)
+      })),
       inviteUrl: `${BASE_URL}/?token=${player.invite_token}`
     });
   } catch (err) {
@@ -179,44 +182,26 @@ app.get('/api/matches', async (req, res) => {
     );
     const playerIds = roomPlayers.rows.map(r => r.player_id);
 
-    // Get all guesses from room players
-    const guessesResult = await pool.query(
-      `SELECT g.match_id, g.player_id, g.points FROM guesses g WHERE g.player_id = ANY($1)`,
-      [playerIds]
-    );
-
-    // Group guesses by match + player (for blind-guessing)
-    const matchIsLocked = new Map(matches.map(m => [m.id, Boolean(m.is_locked)]));
-    const roomGuesses = {}; // matchId -> [{playerId, points}]
-    guessesResult.rows.forEach(g => {
-      if (!roomGuesses[g.match_id]) roomGuesses[g.match_id] = [];
-      roomGuesses[g.match_id].push({ playerId: g.player_id, points: g.points });
-    });
-
-    // Get the current player's guess map (playerId known)
+    // Get the player's own guess
     let userGuessMap = new Map();
     if (playerId) {
-      const myGuesses = guessesResult.rows.filter(g => g.player_id === playerId);
-      userGuessMap = new Map(myGuesses.map(g => [g.match_id, g.points]));
+      const myGuesses = await pool.query(
+        'SELECT match_id, points FROM guesses WHERE player_id = $1',
+        [playerId]
+      );
+      userGuessMap = new Map(myGuesses.rows.map(g => [g.match_id, g.points]));
     }
 
+    // Get the room's lock state
+    const roomRow = (await pool.query('SELECT is_locked FROM rooms WHERE id = $1', [roomId])).rows[0];
+    const roomIsLocked = Boolean(roomRow && roomRow.is_locked);
+
     res.json(matches.map(m => {
-      const isLocked = matchIsLocked.get(m.id);
-      const guesses = roomGuesses[m.id] || [];
-      // Blind guessing: if not locked, other players' guesses are completely hidden server-side.
-      // Only the requesting player's own guess is ever revealed to them.
-      let otherGuessCount = null;
-      if (isLocked || m.played) {
-        // Reveal only when locked or played
-        otherGuessCount = guesses.filter(g => playerId && g.playerId !== playerId).length;
-      }
-      // Player's own guess is always visible to them (never hidden server-side)
+      // Player's own guess is always visible to them
       const userGuess = playerId ? (userGuessMap.get(m.id) ?? null) : null;
       return {
         ...formatMatch(m),
-        isLocked: Boolean(isLocked),
-        userGuess,
-        otherGuessCount
+        userGuess
       };
     }));
   } catch (err) {
@@ -235,13 +220,14 @@ function formatMatch(m) {
     prevLeagueContext: m.prev_league_context,
     nextLeagueContext: m.next_league_context,
     played: Boolean(m.played),
-    isLocked: Boolean(m.is_locked),
     resultScore: m.result_score,
     actualPoints: m.played ? m.result_points : null
   };
 }
 
-// GET /api/guesses - Get guesses (room-filtered, blind-guessing aware)
+// GET /api/guesses - Get guesses for the match list
+// Returns all guesses when the room is unlocked (players see their own guess per match).
+// When room is locked, returns all players' guesses so the full leaderboard can render.
 app.get('/api/guesses', async (req, res) => {
   try {
     const { token } = req.query;
@@ -273,19 +259,23 @@ app.get('/api/guesses', async (req, res) => {
     const playerIds = roomPlayers.rows.map(r => r.player_id);
     if (playerIds.length === 0) return res.json([]);
 
-    const sql = `
-      SELECT g.id, g.player_id, g.match_id, g.points, g.guessed_at, p.name as player_name, m.is_locked, m.played
-      FROM guesses g
-      JOIN players p ON g.player_id = p.id
-      JOIN matches m ON g.match_id = m.id
-      WHERE g.player_id = ANY($1)
-      ORDER BY g.guessed_at DESC
-    `;
-    const result = await pool.query(sql, [playerIds]);
+    // Check room lock state
+    const roomRow = (await pool.query('SELECT is_locked FROM rooms WHERE id = $1', [roomId])).rows[0];
+    const roomIsLocked = Boolean(roomRow && roomRow.is_locked);
 
-    // Blind guessing: only expose guesses if match is locked or played
+    const result = await pool.query(
+      `SELECT g.id, g.player_id, g.match_id, g.points, g.guessed_at, p.name as player_name, m.played
+       FROM guesses g
+       JOIN players p ON g.player_id = p.id
+       JOIN matches m ON g.match_id = m.id
+       WHERE g.player_id = ANY($1)
+       ORDER BY g.guessed_at DESC`,
+      [playerIds]
+    );
+
+    // When room is locked, everyone sees all guesses. When unlocked, each player only sees their own.
     res.json(result.rows
-      .filter(r => Boolean(r.is_locked) || Boolean(r.played))
+      .filter(r => roomIsLocked || r.player_id === playerId)
       .map(r => ({
         id: r.id,
         playerId: r.player_id,
@@ -636,6 +626,7 @@ app.get('/api/admin/rooms', requireAdmin, async (req, res) => {
         inviteToken: r.invite_token,
         inviteUrl: `${BASE_URL}/?room=${r.invite_token}`,
         createdAt: r.created_at,
+        isLocked: Boolean(r.is_locked),
         memberCount: members.rows.length
       };
     }));
@@ -684,16 +675,32 @@ app.delete('/api/admin/rooms/:id/players/:playerId', requireAdmin, async (req, r
   }
 });
 
-// POST /api/admin/matches/:id/lock - Lock a match (reveal guesses)
-app.post('/api/admin/matches/:id/lock', requireAdmin, async (req, res) => {
+// POST /api/admin/rooms/:id/lock - Lock a room (reveal all guesses in that room)
+app.post('/api/admin/rooms/:id/lock', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const result = await pool.query(
-      'UPDATE matches SET is_locked = true WHERE id = $1 RETURNING id',
+      'UPDATE rooms SET is_locked = true WHERE id = $1 RETURNING id',
       [id]
     );
-    if (result.rowCount === 0) return res.status(404).json({ error: 'Match not found' });
-    broadcast({ type: 'match_locked', matchId: id });
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Room not found' });
+    broadcast({ type: 'room_locked', roomId: parseInt(id) });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/rooms/:id/unlock - Unlock a room (re-hide all guesses)
+app.post('/api/admin/rooms/:id/unlock', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'UPDATE rooms SET is_locked = false WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Room not found' });
+    broadcast({ type: 'room_unlocked', roomId: parseInt(id) });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

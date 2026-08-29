@@ -82,14 +82,10 @@ async function initialize() {
       prev_league_context TEXT,
       next_league_context TEXT,
       played BOOLEAN DEFAULT false,
-      is_locked BOOLEAN DEFAULT false,
       result_score VARCHAR(10),
       result_points INTEGER CHECK(result_points IN (0, 1, 3))
     )
   `);
-
-  // Ensure is_locked exists on existing tables (no-op if already added)
-  await pool.query(`ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS guesses (
@@ -108,9 +104,13 @@ async function initialize() {
       id SERIAL PRIMARY KEY,
       name VARCHAR(255) NOT NULL,
       invite_token VARCHAR(50) UNIQUE NOT NULL,
+      is_locked BOOLEAN DEFAULT false,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // Ensure is_locked exists on rooms (no-op if already added)
+  await pool.query(`ALTER TABLE rooms ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS room_players (

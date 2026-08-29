@@ -807,8 +807,10 @@ function validateToken(token) {
 function updateRoomBadge() {
     const badge = document.getElementById('currentRoomBadge');
     if (currentRoom) {
-        badge.textContent = '🏠 ' + currentRoom.name;
-        badge.title = 'Aktif oda: ' + currentRoom.name;
+        const lockIcon = currentRoom.isLocked ? '🔒 ' : '🔓 ';
+        const lockTitle = currentRoom.isLocked ? ' (tahminler görünür)' : ' (tahminler gizli)';
+        badge.textContent = lockIcon + ' ' + currentRoom.name;
+        badge.title = 'Aktif oda' + lockTitle;
         badge.classList.remove('hidden');
     } else {
         badge.classList.add('hidden');
@@ -880,25 +882,9 @@ function connectWebSocket() {
             const data = JSON.parse(event.data);
             if (data.type === 'leaderboard_update') {
                 loadAllData();
-            } else if (data.type === 'match_locked') {
-                // Just reload matches to update lock badges (no full re-render)
-                const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
-                fetch(API_BASE + '/api/matches?token=' + encodeURIComponent(token))
-                    .then(r => r.json())
-                    .then(matches => {
-                        allMatches = matches;
-                        // Update lock badge on the affected card in the carousel
-                        const card = document.getElementById('match-card-' + data.matchId);
-                        if (card) {
-                            const lockEl = card.querySelector('.lock-icon');
-                            if (lockEl) {
-                                lockEl.className = 'lock-icon locked';
-                                lockEl.title = 'Tahminler kilitli';
-                                lockEl.innerHTML = '🔒 Kilitli';
-                            }
-                        }
-                        populateMatchList(currentMatchListFilter);
-                    });
+            } else if (data.type === 'room_locked' || data.type === 'room_unlocked') {
+                // Reload all data so the lock state propagates (match list, leaderboard, badge)
+                loadAllData(true);
             }
         } catch (err) { console.error('WS parse error:', err); }
     };
@@ -912,20 +898,34 @@ function connectWebSocket() {
 function loadAllData(silent = false) {
     if (!silent) showLoading(true);
     const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
+    const playerToken = token.startsWith('inv_') ? token : '';
     const leaderboardUrl = currentRoom
         ? API_BASE + '/api/leaderboard?roomId=' + currentRoom.id
         : API_BASE + '/api/leaderboard';
     Promise.all([
         fetch(API_BASE + '/api/matches?token=' + encodeURIComponent(token)).then(r => r.json()),
         fetch(API_BASE + '/api/guesses?token=' + encodeURIComponent(token)).then(r => r.json()),
-        fetch(leaderboardUrl).then(r => r.json())
-    ]).then(([matches, guesses, leaderboard]) => {
+        fetch(leaderboardUrl).then(r => r.json()),
+        // Refresh room lock state
+        playerToken ? fetch(API_BASE + '/api/invite/' + encodeURIComponent(playerToken)).then(r => r.json()) : Promise.resolve(null)
+    ]).then(([matches, guesses, leaderboard, inviteData]) => {
         allMatches = matches;
         allGuesses = guesses;
         allLeaderboard = leaderboard;
+        // Update room lock state if returned
+        if (inviteData && inviteData.rooms && inviteData.rooms[0]) {
+            const updatedRoom = inviteData.rooms[0];
+            currentRoom = {
+                id: updatedRoom.id,
+                name: updatedRoom.name,
+                inviteToken: updatedRoom.inviteToken,
+                isLocked: updatedRoom.isLocked
+            };
+            updateRoomBadge();
+        }
         renderLeaderboard();
         populateMatchList(currentMatchListFilter);
-        // Rebuild the whole carousel only if needed (e.g., on lock change) — preserve position
+        // Rebuild the whole carousel only if needed — preserve position
         if (allMatches[currentMatchIndex]) {
             const cur = allMatches[currentMatchIndex];
             const curCard = document.getElementById('match-card-' + cur.id);
@@ -965,6 +965,7 @@ function submitGuess(matchId, points, buttonEl) {
     const previousGuess = allGuesses.find(g =>
         g.matchId === matchId && g.playerName === currentPlayer.name
     );
+    const previousUserGuess = match.userGuess;
 
     // 2. Update local state immediately
     const newGuess = {
@@ -982,6 +983,10 @@ function submitGuess(matchId, points, buttonEl) {
     } else {
         allGuesses.push(newGuess);
     }
+
+    // Update match's userGuess so the carousel and match list show it immediately
+    const matchInAll = allMatches.find(m => m.id === matchId);
+    if (matchInAll) matchInAll.userGuess = points;
 
     // 3. Update button to show spinner + disable siblings
     // Find the closest container (carousel card OR match list item)
@@ -1081,6 +1086,7 @@ function submitGuess(matchId, points, buttonEl) {
                 !(g.matchId === matchId && g.playerName === currentPlayer.name)
             );
         }
+        if (matchInAll) matchInAll.userGuess = previousUserGuess;
         if (card) {
             card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(b => {
                 b.disabled = false;
@@ -1340,6 +1346,9 @@ function populateMatchList(filter) {
     else if (filter === 'bjk') filtered = allMatches.filter(m => m.team === 'Beşiktaş');
     else if (filter === 'ts') filtered = allMatches.filter(m => m.team === 'Trabzonspor');
 
+    // Reveal other guesses only when the room is locked
+    const roomUnlocked = currentRoom && currentRoom.isLocked;
+
     filtered.forEach(match => {
         const matchGuesses = allGuesses.filter(g => g.matchId === match.id);
         const stats = { 0: 0, 1: 0, 3: 0 };
@@ -1356,7 +1365,10 @@ function populateMatchList(filter) {
             statusText = match.resultScore + ' (' + match.actualPoints + ' puan)';
             statusClass = 'status-correct';
         }
-        const myGuess = matchGuesses.find(g => currentPlayer && g.playerName === currentPlayer.name);
+        // Server returns the player's own guess on the match object, so it's always visible
+        const myGuess = (match.userGuess !== null && match.userGuess !== undefined)
+            ? { points: match.userGuess }
+            : null;
         let myGuessHTML = '';
         if (myGuess) {
             let guessStatusClass = 'status-upcoming';
@@ -1382,7 +1394,6 @@ function populateMatchList(filter) {
                 </div>
                 <div class="flex flex-col items-end gap-1">
                     <span class="status-badge ${statusClass}">${statusText}</span>
-                    <span class="lock-icon ${match.isLocked ? 'locked' : 'unlocked'}" title="${match.isLocked ? 'Tahminler kilitli' : 'Tahminler açık'}">${match.isLocked ? '🔒 Kilitli' : '🔓 Açık'}</span>
                 </div>
             </div>
             <!-- League context (small, muted) -->
@@ -1391,13 +1402,13 @@ function populateMatchList(filter) {
                 ${match.nextLeagueContext ? '<p>⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : ''}
             </div>
             <div class="flex items-center justify-between mt-3">
-                ${match.isLocked || match.played ? '<div class="flex space-x-2">' +
+                ${roomUnlocked || match.played ? '<div class="flex space-x-2">' +
                     '<div class="flex flex-col items-center"><span class="points-badge points-0">' + stats[0] + '</span><span class="text-xs text-gray-500 mt-1">0 puan</span></div>' +
                     '<div class="flex flex-col items-center"><span class="points-badge points-1">' + stats[1] + '</span><span class="text-xs text-gray-500 mt-1">1 puan</span></div>' +
                     '<div class="flex flex-col items-center"><span class="points-badge points-3">' + stats[3] + '</span><span class="text-xs text-gray-500 mt-1">3 puan</span></div>' +
                     '</div>' :
                     '<div class="flex items-center gap-2 text-gray-400"><span>🔒</span><span class="text-sm italic">Diğer tahminler gizli</span></div>'}
-                ${match.isLocked || match.played ? '<div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">' + mostPopular + '</span></div>' : ''}
+                ${roomUnlocked || match.played ? '<div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">' + mostPopular + '</span></div>' : ''}
             </div>
             ${!match.played && currentPlayer && currentPlayer.canEdit ? `
             <div class="flex space-x-2 mt-3 guess-actions" data-match-id="${match.id}">
@@ -1406,7 +1417,7 @@ function populateMatchList(filter) {
                 <button data-points="3" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">3</button>
             </div>` : ''}
             ${myGuessHTML}
-            ${match.isLocked || match.played ? `
+            ${roomUnlocked || match.played ? `
             <div class="mt-4">
                 <div class="match-detail-toggle flex justify-between items-center bg-gray-50 p-2 rounded-lg cursor-pointer">
                     <span class="font-medium text-gray-700">Oyuncu Tahminleri (${matchGuesses.length})</span>
@@ -1503,12 +1514,10 @@ function populateMatchesCarousel() {
         card.innerHTML = '<div class="card ' + teamClass + '" style="border-left-width:4px;">' +
             // Prev league context (small, muted)
             (match.prevLeagueContext ? '<p class="text-xs text-gray-400 mb-1">⬆ Önceki: ' + match.prevLeagueContext + '</p>' : '') +
-            // Main title: tournament badge + team name + vs + opponent + home/away inline + lock badge
+            // Main title: tournament badge + team name + vs + opponent + home/away inline
             '<div class="flex items-center gap-2 flex-wrap mb-2">' +
             getTournamentBadge(match.tournament) +
             '<h3 class="text-xl font-bold text-gray-800">' + match.team + ' <span class="text-gray-400">vs</span> ' + match.opponent + ' <span class="text-sm ' + (match.homeOrAway === 'Home' ? 'home-icon' : 'away-icon') + ' font-bold ml-1">' + getHomeAwayBadge(match.homeOrAway) + '</span></h3>' +
-            '<span class="lock-icon ' + (match.isLocked ? 'locked' : 'unlocked') + '" title="' + (match.isLocked ? 'Tahminler kilitli' : 'Tahminler açık') + '">' +
-            (match.isLocked ? '🔒' : '🔓') + ' ' + (match.isLocked ? 'Kilitli' : 'Açık') + '</span>' +
             '</div>' +
             // Date
             (match.matchDate ? '<p class="text-sm font-medium text-indigo-600 mb-1">📅 ' + formatTurkishDate(match.matchDate) + '</p>' : '') +

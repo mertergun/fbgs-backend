@@ -45,9 +45,14 @@ async function setResult(matchId, resultScore, resultPoints) {
   console.log(`✓ Updated: ${matchId} → ${resultScore} (${resultPoints} pts)`);
 }
 
-async function lockMatch(matchId) {
-  await apiFetch(`/api/admin/matches/${matchId}/lock`, { method: 'POST' });
-  console.log(`✓ Locked match: ${matchId}`);
+async function lockRoom(roomId) {
+  await apiFetch(`/api/admin/rooms/${roomId}/lock`, { method: 'POST' });
+  console.log(`✓ Locked room: ${roomId} (all guesses in this room are now visible)`);
+}
+
+async function unlockRoom(roomId) {
+  await apiFetch(`/api/admin/rooms/${roomId}/unlock`, { method: 'POST' });
+  console.log(`✓ Unlocked room: ${roomId} (guesses are blind again)`);
 }
 
 async function createRoom(name) {
@@ -69,7 +74,8 @@ async function listRooms() {
   }
   console.log('\nRooms:\n');
   for (const r of rooms) {
-    console.log(`  [${r.id}] ${r.name} (${r.memberCount} üye) ${r.inviteToken}`);
+    const lockStatus = r.isLocked ? '🔒 Kilitled' : '🔓 Açık';
+    console.log(`  [${r.id}] ${r.name} (${r.memberCount} üye) ${lockStatus} ${r.inviteToken}`);
     console.log(`       ${r.inviteUrl}`);
   }
   console.log();
@@ -116,7 +122,6 @@ function displayMatches(matches) {
   matches.forEach(m => {
     let status;
     if (m.played) status = `✓ ${m.result_score} (${m.result_points}pts)`;
-    else if (m.is_locked) status = '🔒 Locked';
     else status = '○ Pending';
     const name = `${m.team} vs ${m.opponent} (${m.home_or_away})`;
     console.log(`  ${String(m.id).padEnd(10)} [${String(m.team).padEnd(12)} ${m.tournament}] ${name.padEnd(50)} ${status}`);
@@ -176,13 +181,14 @@ async function main() {
   console.log(`  Default expiry: ${DEFAULT_EDIT_UNTIL}`);
   console.log(`  Database: PostgreSQL (Neon)\n`);
   console.log('Commands:');
-  console.log('  list                  - Show all matches (with lock status)');
+  console.log('  list                  - Show all matches');
   console.log('  set <id> <score> <pts>  - Set match result (pts: 0/1/3)');
-  console.log('  lock <id>             - Lock a match (reveal guesses)');
-  console.log('  players               - Show all players + invite URLs');
+  console.log('  lockroom <id>         - Lock a room (reveal all guesses)');
+  console.log('  unlockroom <id>       - Unlock a room (hide guesses)');
+  console.log('  players               - Show all players + rooms');
   console.log('  addplayer <name> [date] [--room <id>] - Create player; optional --room <id> assigns to that room (default: first room)');
   console.log('  removeplayer <id>     - Delete player (and their guesses)');
-  console.log('  rooms                 - List all rooms + invite URLs');
+  console.log('  rooms                 - List all rooms + invite URLs + lock status');
   console.log('  addroom <name>        - Create a new room');
   console.log('  reset                 - Delete ALL guesses (debug - requires "yes" confirmation)');
   console.log('  server                - Show current server URL');
@@ -233,10 +239,22 @@ async function main() {
       continue;
     }
 
-    if (cmd === 'lock' && parts.length >= 2) {
-      const matchId = parts[1];
+    if (cmd === 'lockroom' && parts.length >= 2) {
+      const roomId = parseInt(parts[1]);
+      if (isNaN(roomId)) { console.log('Usage: lockroom <id>'); continue; }
       try {
-        await lockMatch(matchId);
+        await lockRoom(roomId);
+      } catch (e) {
+        console.log('Error:', e.message);
+      }
+      continue;
+    }
+
+    if (cmd === 'unlockroom' && parts.length >= 2) {
+      const roomId = parseInt(parts[1]);
+      if (isNaN(roomId)) { console.log('Usage: unlockroom <id>'); continue; }
+      try {
+        await unlockRoom(roomId);
       } catch (e) {
         console.log('Error:', e.message);
       }
