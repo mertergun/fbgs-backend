@@ -473,7 +473,7 @@
         <!-- Scoreboard View -->
         <div id="scoreboardView" class="card hidden">
             <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
-                <h2 class="text-2xl font-bold text-gray-800">Puan Durumu</h2>
+                <h2 class="text-2xl font-bold text-gray-800" title="Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer">Puan Durumu ⓘ</h2>
                 <div class="flex space-x-2">
                     <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
                     <button id="viewMatchListButton" class="btn-ghost text-sm">Maç Listesi</button>
@@ -1176,13 +1176,10 @@ function renderLeaderboard() {
                     </div>
                 </div>
             </div>
-            <div class="text-xs text-gray-500 italic mt-1 mb-2">
-                Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer
-            </div>
             <div class="team-result-grid mt-3">
                 ${teamBreakdown}
             </div>
-            <div class="text-xs text-gray-400 mt-2">○ Bekliyor · ✓ Doğru · ✗ Yanlış</div>
+            <div class="text-xs text-gray-400 mt-2" title="Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer">○ Bekliyor · ✓ Doğru · ✗ Yanlış</div>
         `;
         listContainer.appendChild(div);
     });
