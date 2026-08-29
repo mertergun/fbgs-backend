@@ -11,50 +11,50 @@ const pool = new Pool({
 // 2026/2027 European campaigns: GS & FB (UCL), BJK (UEL), TS (UECL)
 const SEED_MATCHES = [
   // ==========================================
-  // GALATASARAY (UEFA Champions League)
+  // GALATASARAY (UEFA Champions League - 8 Matches)
   // ==========================================
-  { id: "gs_1", team: "Galatasaray", tournament: "UCL", opponent: "Barcelona",         home_or_away: "Home", match_date: "2026-09-15", prev_league_context: "Hafta 4: Gaziantep FK (D - 12 Eyl)",  next_league_context: "Hafta 5: Fenerbahçe (D - 20 Eyl)" },
-  { id: "gs_2", team: "Galatasaray", tournament: "UCL", opponent: "Paris Saint-Germain", home_or_away: "Away", match_date: "2026-09-30", prev_league_context: "Hafta 6: Kasımpaşa (E - 27 Eyl)",    next_league_context: "Hafta 7: Alanyaspor (E - 4 Eki)" },
-  { id: "gs_3", team: "Galatasaray", tournament: "UCL", opponent: "Aston Villa",       home_or_away: "Home", match_date: "2026-10-21", prev_league_context: "Hafta 8: Antalyaspor (D - 18 Eki)",   next_league_context: "Hafta 9: Beşiktaş (E - 25 Eki)" },
-  { id: "gs_4", team: "Galatasaray", tournament: "UCL", opponent: "Sporting CP",        home_or_away: "Away", match_date: "2026-11-04", prev_league_context: "Hafta 10: Samsunspor (E - 1 Kas)",   next_league_context: "Hafta 11: Bodrum FK (D - 8 Kas)" },
-  { id: "gs_5", team: "Galatasaray", tournament: "UCL", opponent: "Feyenoord",         home_or_away: "Home", match_date: "2026-11-25", prev_league_context: "Hafta 12: Eyüpspor (D - 21 Kas)",    next_league_context: "Hafta 13: Sivasspor (E - 29 Kas)" },
-  { id: "gs_6", team: "Galatasaray", tournament: "UCL", opponent: "Lille",             home_or_away: "Away", match_date: "2026-12-09", prev_league_context: "Hafta 14: Trabzonspor (D - 6 Ara)",   next_league_context: "Hafta 15: Kayserispor (E - 13 Ara)" },
-  { id: "gs_7", team: "Galatasaray", tournament: "UCL", opponent: "Stuttgart",         home_or_away: "Home", match_date: "2027-01-20", prev_league_context: "Hafta 19: Hatayspor (D - 16 Oca)",   next_league_context: "Hafta 20: Konyaspor (E - 24 Oca)" },
-  { id: "gs_8", team: "Galatasaray", tournament: "UCL", opponent: "AEK Athens",        home_or_away: "Away", match_date: "2027-01-27", prev_league_context: "Hafta 20: Konyaspor (E - 24 Oca)",   next_league_context: "Hafta 21: Adana Demirspor (D - 31 Oca)" },
+  { id: "gs_1", team: "Galatasaray", tournament: "UCL", opponent: "Sporting CP",        home_or_away: "Away", match_date: "2026-09-09", prev_league_context: "Hafta 3: Adana Demirspor (🏠 - 30 Ağu)",  next_league_context: "Hafta 4: Başakşehir (✈️ - 13 Eyl)" },
+  { id: "gs_2", team: "Galatasaray", tournament: "UCL", opponent: "Barcelona",          home_or_away: "Home", match_date: "2026-10-13", prev_league_context: "Hafta 7: Kasımpaşa (🏠 - 4 Eki)",       next_league_context: "Hafta 8: Gençlerbirliği (✈️ - 17 Eki)" },
+  { id: "gs_3", team: "Galatasaray", tournament: "UCL", opponent: "Lille",               home_or_away: "Away", match_date: "2026-10-21", prev_league_context: "Hafta 8: Gençlerbirliği (✈️ - 17 Eki)",     next_league_context: "Hafta 9: Fenerbahçe (🏠 - 24 Eki)" },
+  { id: "gs_4", team: "Galatasaray", tournament: "UCL", opponent: "Stuttgart",           home_or_away: "Home", match_date: "2026-11-03", prev_league_context: "Hafta 10: Konyaspor (✈️ - 31 Eki)",      next_league_context: "Hafta 11: Amed SK (🏠 - 7 Kas)" },
+  { id: "gs_5", team: "Galatasaray", tournament: "UCL", opponent: "Aston Villa",        home_or_away: "Home", match_date: "2026-11-24", prev_league_context: "Hafta 12: Samsunspor (🏠 - 21 Kas)",     next_league_context: "Hafta 13: Beşiktaş (✈️ - 28 Kas)" },
+  { id: "gs_6", team: "Galatasaray", tournament: "UCL", opponent: "AEK Athens",         home_or_away: "Away", match_date: "2026-12-08", prev_league_context: "Hafta 14: Çaykur Rizespor (🏠 - 5 Ara)",   next_league_context: "Hafta 15: Eyüpspor (✈️ - 12 Ara)" },
+  { id: "gs_7", team: "Galatasaray", tournament: "UCL", opponent: "Feyenoord",          home_or_away: "Home", match_date: "2027-01-19", prev_league_context: "Hafta 17: Gaziantep FK (✈️ - 16 Oca)",    next_league_context: "Hafta 18: Çorum FK (✈️ - 23 Oca)" },
+  { id: "gs_8", team: "Galatasaray", tournament: "UCL", opponent: "Paris Saint-Germain", home_or_away: "Away", match_date: "2027-01-27", prev_league_context: "Hafta 18: Çorum FK (✈️ - 23 Oca)",      next_league_context: "Hafta 19: Hatayspor (🏠 - 31 Oca)" },
 
   // ==========================================
-  // FENERBAHÇE (UEFA Champions League)
+  // FENERBAHÇE (UEFA Champions League - 8 Matches)
   // ==========================================
-  { id: "fb_1", team: "Fenerbahçe", tournament: "UCL", opponent: "Liverpool",        home_or_away: "Home", match_date: "2026-09-16", prev_league_context: "Hafta 4: Kasımpaşa (D - 13 Eyl)",   next_league_context: "Hafta 5: Galatasaray (E - 20 Eyl)" },
-  { id: "fb_2", team: "Fenerbahçe", tournament: "UCL", opponent: "Atletico Madrid",  home_or_away: "Away", match_date: "2026-09-29", prev_league_context: "Hafta 6: Antalyaspor (D - 26 Eyl)",  next_league_context: "Hafta 7: Samsunspor (D - 4 Eki)" },
-  { id: "fb_3", team: "Fenerbahçe", tournament: "UCL", opponent: "Roma",              home_or_away: "Home", match_date: "2026-10-20", prev_league_context: "Hafta 8: Bodrum FK (E - 17 Eki)",    next_league_context: "Hafta 9: Trabzonspor (D - 24 Eki)" },
-  { id: "fb_4", team: "Fenerbahçe", tournament: "UCL", opponent: "Aston Villa",       home_or_away: "Away", match_date: "2026-11-03", prev_league_context: "Hafta 10: Eyüpspor (D - 1 Kas)",     next_league_context: "Hafta 11: Sivasspor (E - 8 Kas)" },
-  { id: "fb_5", team: "Fenerbahçe", tournament: "UCL", opponent: "Villarreal",        home_or_away: "Home", match_date: "2026-11-24", prev_league_context: "Hafta 12: Kayserispor (D - 22 Kas)",  next_league_context: "Hafta 13: Gaziantep FK (E - 28 Kas)" },
-  { id: "fb_6", team: "Fenerbahçe", tournament: "UCL", opponent: "Shakhtar Donetsk",  home_or_away: "Away", match_date: "2026-12-10", prev_league_context: "Hafta 14: Beşiktaş (D - 6 Ara)",     next_league_context: "Hafta 15: Başakşehir (E - 14 Ara)" },
-  { id: "fb_7", team: "Fenerbahçe", tournament: "UCL", opponent: "Slavia Prague",     home_or_away: "Home", match_date: "2027-01-21", prev_league_context: "Hafta 19: Rizespor (D - 17 Oca)",    next_league_context: "Hafta 20: Alanyaspor (E - 25 Oca)" },
-  { id: "fb_8", team: "Fenerbahçe", tournament: "UCL", opponent: "LASK",              home_or_away: "Away", match_date: "2027-01-28", prev_league_context: "Hafta 20: Alanyaspor (E - 25 Oca)",  next_league_context: "Hafta 21: Konyaspor (D - 1 Şub)" },
+  { id: "fb_1", team: "Fenerbahçe", tournament: "UCL", opponent: "Roma",               home_or_away: "Home", match_date: "2026-09-10", prev_league_context: "Hafta 3: Sivasspor (✈️ - 31 Ağu)",       next_league_context: "Hafta 4: Beşiktaş (🏠 - 13 Eyl)" },
+  { id: "fb_2", team: "Fenerbahçe", tournament: "UCL", opponent: "Aston Villa",        home_or_away: "Away", match_date: "2026-10-14", prev_league_context: "Hafta 7: Çaykur Rizespor (✈️ - 3 Eki)",    next_league_context: "Hafta 8: Alanyaspor (🏠 - 17 Eki)" },
+  { id: "fb_3", team: "Fenerbahçe", tournament: "UCL", opponent: "Slavia Prague",      home_or_away: "Home", match_date: "2026-10-20", prev_league_context: "Hafta 8: Alanyaspor (🏠 - 17 Eki)",       next_league_context: "Hafta 9: Galatasaray (✈️ - 24 Eki)" },
+  { id: "fb_4", team: "Fenerbahçe", tournament: "UCL", opponent: "Liverpool",          home_or_away: "Home", match_date: "2026-11-04", prev_league_context: "Hafta 10: Göztepe (🏠 - 31 Eki)",        next_league_context: "Hafta 11: Çorum FK (✈️ - 8 Kas)" },
+  { id: "fb_5", team: "Fenerbahçe", tournament: "UCL", opponent: "Shakhtar Donetsk",   home_or_away: "Away", match_date: "2026-11-25", prev_league_context: "Hafta 12: Kocaelispor (✈️ - 22 Kas)",     next_league_context: "Hafta 13: Erzurumspor (🏠 - 29 Kas)" },
+  { id: "fb_6", team: "Fenerbahçe", tournament: "UCL", opponent: "LASK",               home_or_away: "Away", match_date: "2026-12-09", prev_league_context: "Hafta 14: Başakşehir (✈️ - 6 Ara)",        next_league_context: "Hafta 15: Trabzonspor (🏠 - 13 Ara)" },
+  { id: "fb_7", team: "Fenerbahçe", tournament: "UCL", opponent: "Villarreal",         home_or_away: "Home", match_date: "2027-01-20", prev_league_context: "Hafta 17: Amed SK (🏠 - 17 Oca)",        next_league_context: "Hafta 18: Gençlerbirliği (🏠 - 24 Oca)" },
+  { id: "fb_8", team: "Fenerbahçe", tournament: "UCL", opponent: "Atletico Madrid",    home_or_away: "Away", match_date: "2027-01-27", prev_league_context: "Hafta 18: Gençlerbirliği (🏠 - 24 Oca)",    next_league_context: "Hafta 19: Konyaspor (✈️ - 31 Oca)" },
 
   // ==========================================
-  // BEŞİKTAŞ (UEFA Europa League)
+  // BEŞİKTAŞ (UEFA Europa League - 8 Matches)
   // ==========================================
-  { id: "bjk_1", team: "Beşiktaş",  tournament: "UEL", opponent: "Ajax",               home_or_away: "Away", match_date: "2026-09-24", prev_league_context: "Hafta 5: Trabzonspor (D - 20 Eyl)",   next_league_context: "Hafta 6: Eyüpspor (E - 27 Eyl)" },
-  { id: "bjk_2", team: "Beşiktaş",  tournament: "UEL", opponent: "Eintracht Frankfurt", home_or_away: "Home", match_date: "2026-10-01", prev_league_context: "Hafta 6: Eyüpspor (E - 27 Eyl)",     next_league_context: "Hafta 7: Gaziantep FK (D - 4 Eki)" },
-  { id: "bjk_3", team: "Beşiktaş",  tournament: "UEL", opponent: "Lyon",               home_or_away: "Away", match_date: "2026-10-22", prev_league_context: "Hafta 8: Konyaspor (E - 18 Eki)",    next_league_context: "Hafta 9: Galatasaray (D - 25 Eki)" },
-  { id: "bjk_4", team: "Beşiktaş",  tournament: "UEL", opponent: "Malmö",              home_or_away: "Home", match_date: "2026-11-05", prev_league_context: "Hafta 10: Kasımpaşa (E - 1 Kas)",   next_league_context: "Hafta 11: Başakşehir (D - 8 Kas)" },
-  { id: "bjk_5", team: "Beşiktaş",  tournament: "UEL", opponent: "Maccabi Tel Aviv",    home_or_away: "Home", match_date: "2026-11-26", prev_league_context: "Hafta 12: Göztepe (E - 22 Kas)",    next_league_context: "Hafta 13: Hatayspor (D - 29 Kas)" },
-  { id: "bjk_6", team: "Beşiktaş",  tournament: "UEL", opponent: "Bodo/Glimt",         home_or_away: "Away", match_date: "2026-12-10", prev_league_context: "Hafta 14: Fenerbahçe (E - 6 Ara)",   next_league_context: "Hafta 15: Adana Demirspor (D - 13 Ara)" },
-  { id: "bjk_7", team: "Beşiktaş",  tournament: "UEL", opponent: "Athletic Club",       home_or_away: "Home", match_date: "2027-01-21", prev_league_context: "Hafta 19: Antalyaspor (E - 16 Oca)",  next_league_context: "Hafta 20: Samsunspor (D - 24 Oca)" },
-  { id: "bjk_8", team: "Beşiktaş",  tournament: "UEL", opponent: "Twente",              home_or_away: "Away", match_date: "2027-01-28", prev_league_context: "Hafta 20: Samsunspor (D - 24 Oca)",  next_league_context: "Hafta 21: Sivasspor (E - 31 Oca)" },
+  { id: "bjk_1", team: "Beşiktaş",  tournament: "UEL", opponent: "Olympique Marseille",     home_or_away: "Home", match_date: "2026-09-17", prev_league_context: "Hafta 4: Fenerbahçe (✈️ - 13 Eyl)",      next_league_context: "Hafta 5: Antalyaspor (🏠 - 20 Eyl)" },
+  { id: "bjk_2", team: "Beşiktaş",  tournament: "UEL", opponent: "Hoffenheim",             home_or_away: "Away", match_date: "2026-10-15", prev_league_context: "Hafta 7: Göztepe (🏠 - 4 Eki)",           next_league_context: "Hafta 8: Samsunspor (✈️ - 18 Eki)" },
+  { id: "bjk_3", team: "Beşiktaş",  tournament: "UEL", opponent: "Crystal Palace",        home_or_away: "Home", match_date: "2026-10-22", prev_league_context: "Hafta 8: Samsunspor (✈️ - 18 Eki)",      next_league_context: "Hafta 9: Çaykur Rizespor (🏠 - 25 Eki)" },
+  { id: "bjk_4", team: "Beşiktaş",  tournament: "UEL", opponent: "Celtic",                home_or_away: "Away", match_date: "2026-11-05", prev_league_context: "Hafta 10: Kasımpaşa (✈️ - 1 Kas)",       next_league_context: "Hafta 11: Başakşehir (🏠 - 8 Kas)" },
+  { id: "bjk_5", team: "Beşiktaş",  tournament: "UEL", opponent: "Hapoel Be'er Sheva",    home_or_away: "Home", match_date: "2026-11-26", prev_league_context: "Hafta 12: Eyüpspor (✈️ - 22 Kas)",      next_league_context: "Hafta 13: Galatasaray (🏠 - 28 Kas)" },
+  { id: "bjk_6", team: "Beşiktaş",  tournament: "UEL", opponent: "Bayer Leverkusen",     home_or_away: "Away", match_date: "2026-12-10", prev_league_context: "Hafta 14: Gaziantep FK (🏠 - 6 Ara)",      next_league_context: "Hafta 15: Sivasspor (✈️ - 14 Ara)" },
+  { id: "bjk_7", team: "Beşiktaş",  tournament: "UEL", opponent: "Union Saint-Gilloise",  home_or_away: "Home", match_date: "2027-01-21", prev_league_context: "Hafta 17: Trabzonspor (🏠 - 16 Oca)",      next_league_context: "Hafta 18: Konyaspor (✈️ - 23 Oca)" },
+  { id: "bjk_8", team: "Beşiktaş",  tournament: "UEL", opponent: "Omonia",                home_or_away: "Away", match_date: "2027-01-28", prev_league_context: "Hafta 18: Konyaspor (✈️ - 23 Oca)",       next_league_context: "Hafta 19: Alanyaspor (🏠 - 30 Oca)" },
 
   // ==========================================
-  // TRABZONSPOR (UEFA Conference League - 6 matches)
+  // TRABZONSPOR (UEFA Conference League - 6 Matches)
   // ==========================================
-  { id: "ts_1", team: "Trabzonspor", tournament: "UECL", opponent: "St. Gallen",    home_or_away: "Away", match_date: "2026-10-01", prev_league_context: "Hafta 6: Konyaspor (E - 28 Eyl)",    next_league_context: "Hafta 7: Hatayspor (D - 4 Eki)" },
-  { id: "ts_2", team: "Trabzonspor", tournament: "UECL", opponent: "Heidenheim",    home_or_away: "Home", match_date: "2026-10-22", prev_league_context: "Hafta 8: Başakşehir (E - 18 Eki)",   next_league_context: "Hafta 9: Fenerbahçe (E - 24 Eki)" },
-  { id: "ts_3", team: "Trabzonspor", tournament: "UECL", opponent: "Rapid Wien",    home_or_away: "Away", match_date: "2026-11-05", prev_league_context: "Hafta 10: Göztepe (D - 1 Kas)",     next_league_context: "Hafta 11: Rizespor (E - 8 Kas)" },
-  { id: "ts_4", team: "Trabzonspor", tournament: "UECL", opponent: "Omonia",        home_or_away: "Home", match_date: "2026-11-26", prev_league_context: "Hafta 12: Adana Demirspor (E - 22 Kas)", next_league_context: "Hafta 13: Alanyaspor (D - 29 Kas)" },
-  { id: "ts_5", team: "Trabzonspor", tournament: "UECL", opponent: "Legia Warsaw",  home_or_away: "Away", match_date: "2026-12-10", prev_league_context: "Hafta 14: Galatasaray (E - 6 Ara)",  next_league_context: "Hafta 15: Kasımpaşa (D - 13 Ara)" },
-  { id: "ts_6", team: "Trabzonspor", tournament: "UECL", opponent: "Celje",         home_or_away: "Home", match_date: "2026-12-17", prev_league_context: "Hafta 15: Kasımpaşa (D - 13 Ara)",  next_league_context: "Hafta 16: Antalyaspor (E - 20 Ara)" },
+  { id: "ts_1", team: "Trabzonspor", tournament: "UECL", opponent: "KuPS Kuopio",    home_or_away: "Away", match_date: "2026-10-15", prev_league_context: "Hafta 7: Konyaspor (🏠 - 4 Eki)",       next_league_context: "Hafta 8: Hatayspor (✈️ - 18 Eki)" },
+  { id: "ts_2", team: "Trabzonspor", tournament: "UECL", opponent: "Hearts",         home_or_away: "Home", match_date: "2026-10-22", prev_league_context: "Hafta 8: Hatayspor (✈️ - 18 Eki)",      next_league_context: "Hafta 9: Başakşehir (🏠 - 25 Eki)" },
+  { id: "ts_3", team: "Trabzonspor", tournament: "UECL", opponent: "Jablonec",       home_or_away: "Home", match_date: "2026-11-12", prev_league_context: "Hafta 11: Adana Demirspor (🏠 - 8 Kas)",    next_league_context: "Hafta 12: Alanyaspor (✈️ - 22 Kas)" },
+  { id: "ts_4", team: "Trabzonspor", tournament: "UECL", opponent: "Red Star Belgrade", home_or_away: "Away", match_date: "2026-11-26", prev_league_context: "Hafta 12: Alanyaspor (✈️ - 22 Kas)",    next_league_context: "Hafta 13: Kasımpaşa (🏠 - 29 Kas)" },
+  { id: "ts_5", team: "Trabzonspor", tournament: "UECL", opponent: "CSKA Sofia",     home_or_away: "Away", match_date: "2026-12-10", prev_league_context: "Hafta 14: Galatasaray (🏠 - 6 Ara)",     next_league_context: "Hafta 15: Fenerbahçe (✈️ - 13 Ara)" },
+  { id: "ts_6", team: "Trabzonspor", tournament: "UECL", opponent: "Freiburg",       home_or_away: "Home", match_date: "2026-12-17", prev_league_context: "Hafta 15: Fenerbahçe (✈️ - 13 Ara)",     next_league_context: "Hafta 16: Antalyaspor (🏠 - 20 Ara)" },
 ];
 
 async function initialize() {
@@ -101,7 +101,7 @@ async function initialize() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_guesses_match ON guesses(match_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_players_token ON players(invite_token)`);
 
-  // Seed matches if empty
+  // Seed matches if empty, otherwise sync metadata (date/opponent/home/away/context) without touching results
   const res = await pool.query('SELECT COUNT(*) FROM matches');
   if (parseInt(res.rows[0].count) === 0) {
     for (const m of SEED_MATCHES) {
@@ -113,7 +113,17 @@ async function initialize() {
     }
     console.log('Seeded', SEED_MATCHES.length, 'matches for 2026/27 European campaigns');
   } else {
-    console.log('Matches table already populated (', res.rows[0].count, 'rows)');
+    // Sync metadata (date, opponent, home/away, context) from SEED_MATCHES without overwriting results
+    for (const m of SEED_MATCHES) {
+      await pool.query(
+        `UPDATE matches
+         SET team = $2, tournament = $3, opponent = $4, home_or_away = $5,
+             match_date = $6, prev_league_context = $7, next_league_context = $8
+         WHERE id = $1`,
+        [m.id, m.team, m.tournament, m.opponent, m.home_or_away, m.match_date, m.prev_league_context, m.next_league_context]
+      );
+    }
+    console.log('Matches table already populated (', res.rows[0].count, 'rows) — metadata synced from SEED_MATCHES');
   }
 }
 
