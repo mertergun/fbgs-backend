@@ -1,5 +1,6 @@
 require('dotenv').config();
 const { Pool } = require('pg');
+const crypto = require('crypto');
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -81,10 +82,14 @@ async function initialize() {
       prev_league_context TEXT,
       next_league_context TEXT,
       played BOOLEAN DEFAULT false,
+      is_locked BOOLEAN DEFAULT false,
       result_score VARCHAR(10),
       result_points INTEGER CHECK(result_points IN (0, 1, 3))
     )
   `);
+
+  // Ensure is_locked exists on existing tables (no-op if already added)
+  await pool.query(`ALTER TABLE matches ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT false`);
 
   await pool.query(`
     CREATE TABLE IF NOT EXISTS guesses (
@@ -97,9 +102,47 @@ async function initialize() {
     )
   `);
 
+  // ===== Private Rooms (multi-league) =====
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rooms (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) NOT NULL,
+      invite_token VARCHAR(50) UNIQUE NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS room_players (
+      room_id INTEGER REFERENCES rooms(id) ON DELETE CASCADE,
+      player_id INTEGER REFERENCES players(id) ON DELETE CASCADE,
+      joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (room_id, player_id)
+    )
+  `);
+
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_guesses_player ON guesses(player_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_guesses_match ON guesses(match_id)`);
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_players_token ON players(invite_token)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_room_players_player ON room_players(player_id)`);
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_room_players_room ON room_players(room_id)`);
+
+  // Seed a default room + assign existing players to it (one-time migration)
+  const roomCount = await pool.query('SELECT COUNT(*) FROM rooms');
+  if (parseInt(roomCount.rows[0].count) === 0) {
+    const defaultRoom = await pool.query(
+      `INSERT INTO rooms (name, invite_token) VALUES ($1, $2) RETURNING id`,
+      ['Genel Oda', 'room_' + crypto.randomBytes(8).toString('hex')]
+    );
+    const roomId = defaultRoom.rows[0].id;
+    await pool.query(
+      `INSERT INTO room_players (room_id, player_id)
+       SELECT $1, id FROM players ON CONFLICT DO NOTHING`,
+      [roomId]
+    );
+    const token = (await pool.query('SELECT invite_token FROM rooms WHERE id = $1', [roomId])).rows[0].invite_token;
+    console.log('Created default room (Genel Oda) — invite token:', token);
+  }
 
   // Seed matches if empty, otherwise sync metadata (date/opponent/home/away/context) without touching results
   const res = await pool.query('SELECT COUNT(*) FROM matches');

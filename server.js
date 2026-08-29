@@ -47,8 +47,12 @@ function broadcast(message) {
 
 async function broadcastLeaderboard() {
   try {
-    const leaderboard = await getLeaderboard();
-    broadcast({ type: 'leaderboard_update', data: leaderboard });
+    // Broadcast for every room
+    const rooms = await pool.query('SELECT id FROM rooms');
+    for (const r of rooms.rows) {
+      const leaderboard = await getLeaderboard(r.id);
+      broadcast({ type: 'leaderboard_update', roomId: r.id, data: leaderboard });
+    }
   } catch (err) {
     console.error('Leaderboard broadcast error:', err.message);
   }
@@ -72,10 +76,34 @@ function isTokenValid(player, now = new Date()) {
 // PUBLIC ENDPOINTS
 // ============================================================
 
-// GET /api/invite/:token - Validate invite token
+// GET /api/invite/:token - Validate invite token (player or room)
 app.get('/api/invite/:token', async (req, res) => {
   try {
     const { token } = req.params;
+    // Check if this is a room token
+    if (token.startsWith('room_')) {
+      const roomResult = await pool.query('SELECT * FROM rooms WHERE invite_token = $1', [token]);
+      if (roomResult.rows.length === 0) return res.status(404).json({ error: 'Invalid room token' });
+      const room = roomResult.rows[0];
+      // List members of this room
+      const members = await pool.query(
+        `SELECT p.id, p.name, p.invite_token, rp.joined_at
+         FROM room_players rp JOIN players p ON p.id = rp.player_id
+         WHERE rp.room_id = $1 ORDER BY rp.joined_at`,
+        [room.id]
+      );
+      return res.json({
+        type: 'room',
+        room: {
+          id: room.id,
+          name: room.name,
+          inviteToken: room.invite_token
+        },
+        members: members.rows.map(m => ({ id: m.id, name: m.name, joinedAt: m.joined_at })),
+        inviteUrl: `${BASE_URL}/?token=${room.invite_token}`
+      });
+    }
+    // Otherwise treat as a player token
     const result = await pool.query('SELECT * FROM players WHERE invite_token = $1', [token]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Invalid invite token' });
 
@@ -84,7 +112,16 @@ app.get('/api/invite/:token', async (req, res) => {
     const canEdit = isTokenValid(player, now);
     const expired = player.edit_until && new Date(player.edit_until) <= now;
 
+    // Find the player's room(s)
+    const roomsResult = await pool.query(
+      `SELECT r.id, r.name, r.invite_token
+       FROM room_players rp JOIN rooms r ON r.id = rp.room_id
+       WHERE rp.player_id = $1`,
+      [player.id]
+    );
+
     res.json({
+      type: 'player',
       player: {
         id: player.id,
         name: player.name,
@@ -93,6 +130,7 @@ app.get('/api/invite/:token', async (req, res) => {
         canEdit,
         expired: !!expired
       },
+      rooms: roomsResult.rows.map(r => ({ id: r.id, name: r.name, inviteToken: r.invite_token })),
       inviteUrl: `${BASE_URL}/?token=${player.invite_token}`
     });
   } catch (err) {
@@ -111,19 +149,76 @@ app.get('/api/matches', async (req, res) => {
       return res.json(matches.map(formatMatch));
     }
 
-    const playerResult = await pool.query('SELECT * FROM players WHERE invite_token = $1', [token]);
-    if (playerResult.rows.length === 0) {
-      return res.json(matches.map(formatMatch));
+    let playerId = null;
+    let roomId = null;
+
+    if (token.startsWith('room_')) {
+      // Room token — find the room, list all players in it
+      const roomResult = await pool.query('SELECT id FROM rooms WHERE invite_token = $1', [token]);
+      if (roomResult.rows.length === 0) return res.json(matches.map(formatMatch));
+      roomId = roomResult.rows[0].id;
+    } else {
+      // Player token
+      const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [token]);
+      if (playerResult.rows.length === 0) return res.json(matches.map(formatMatch));
+      playerId = playerResult.rows[0].id;
+      // Find which room to use — take the first room the player belongs to
+      const roomResult = await pool.query(
+        'SELECT room_id FROM room_players WHERE player_id = $1 LIMIT 1',
+        [playerId]
+      );
+      if (roomResult.rows.length > 0) roomId = roomResult.rows[0].room_id;
     }
-    const player = playerResult.rows[0];
 
-    const guessesResult = await pool.query('SELECT match_id, points FROM guesses WHERE player_id = $1', [player.id]);
-    const guessMap = new Map(guessesResult.rows.map(g => [g.match_id, g.points]));
+    if (!roomId) return res.json(matches.map(formatMatch));
 
-    res.json(matches.map(m => ({
-      ...formatMatch(m),
-      userGuess: guessMap.get(m.id) || null
-    })));
+    // Get all player IDs in this room
+    const roomPlayers = await pool.query(
+      'SELECT player_id FROM room_players WHERE room_id = $1',
+      [roomId]
+    );
+    const playerIds = roomPlayers.rows.map(r => r.player_id);
+
+    // Get all guesses from room players
+    const guessesResult = await pool.query(
+      `SELECT g.match_id, g.player_id, g.points FROM guesses g WHERE g.player_id = ANY($1)`,
+      [playerIds]
+    );
+
+    // Group guesses by match + player (for blind-guessing)
+    const matchIsLocked = new Map(matches.map(m => [m.id, Boolean(m.is_locked)]));
+    const roomGuesses = {}; // matchId -> [{playerId, points}]
+    guessesResult.rows.forEach(g => {
+      if (!roomGuesses[g.match_id]) roomGuesses[g.match_id] = [];
+      roomGuesses[g.match_id].push({ playerId: g.player_id, points: g.points });
+    });
+
+    // Get the current player's guess map (playerId known)
+    let userGuessMap = new Map();
+    if (playerId) {
+      const myGuesses = guessesResult.rows.filter(g => g.player_id === playerId);
+      userGuessMap = new Map(myGuesses.map(g => [g.match_id, g.points]));
+    }
+
+    res.json(matches.map(m => {
+      const isLocked = matchIsLocked.get(m.id);
+      const guesses = roomGuesses[m.id] || [];
+      // Build guesses array: only show non-locked guesses, or show all if locked
+      let otherGuesses = [];
+      if (isLocked || m.played) {
+        // Blind guessing off — show all other guesses (anonymized)
+        otherGuesses = guesses
+          .filter(g => playerId && g.playerId !== playerId)
+          .map(g => ({ points: g.points }));
+      }
+      // else: blind guessing on — don't show other players' guesses
+      return {
+        ...formatMatch(m),
+        isLocked: Boolean(isLocked),
+        userGuess: playerId ? (userGuessMap.get(m.id) || null) : null,
+        otherGuessCount: otherGuesses.length
+      };
+    }));
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -140,28 +235,109 @@ function formatMatch(m) {
     prevLeagueContext: m.prev_league_context,
     nextLeagueContext: m.next_league_context,
     played: Boolean(m.played),
+    isLocked: Boolean(m.is_locked),
     resultScore: m.result_score,
     actualPoints: m.played ? m.result_points : null
   };
 }
 
-// GET /api/guesses - Get all guesses
+// GET /api/guesses - Get guesses (room-filtered, blind-guessing aware)
 app.get('/api/guesses', async (req, res) => {
   try {
+    const { token } = req.query;
+    let playerId = null;
+    let roomId = null;
+
+    if (token && token.startsWith('room_')) {
+      const roomResult = await pool.query('SELECT id FROM rooms WHERE invite_token = $1', [token]);
+      if (roomResult.rows.length === 0) return res.json([]);
+      roomId = roomResult.rows[0].id;
+    } else if (token) {
+      const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [token]);
+      if (playerResult.rows.length > 0) {
+        playerId = playerResult.rows[0].id;
+        const roomResult = await pool.query(
+          'SELECT room_id FROM room_players WHERE player_id = $1 LIMIT 1',
+          [playerId]
+        );
+        if (roomResult.rows.length > 0) roomId = roomResult.rows[0].room_id;
+      }
+    }
+
+    if (!roomId) return res.json([]);
+
+    const roomPlayers = await pool.query(
+      'SELECT player_id FROM room_players WHERE room_id = $1',
+      [roomId]
+    );
+    const playerIds = roomPlayers.rows.map(r => r.player_id);
+    if (playerIds.length === 0) return res.json([]);
+
     const sql = `
-      SELECT g.id, g.player_id, g.match_id, g.points, g.guessed_at, p.name as player_name
+      SELECT g.id, g.player_id, g.match_id, g.points, g.guessed_at, p.name as player_name, m.is_locked, m.played
       FROM guesses g
       JOIN players p ON g.player_id = p.id
+      JOIN matches m ON g.match_id = m.id
+      WHERE g.player_id = ANY($1)
       ORDER BY g.guessed_at DESC
     `;
-    const result = await pool.query(sql);
+    const result = await pool.query(sql, [playerIds]);
+
+    // Blind guessing: only expose guesses if match is locked or played
+    res.json(result.rows
+      .filter(r => Boolean(r.is_locked) || Boolean(r.played))
+      .map(r => ({
+        id: r.id,
+        playerId: r.player_id,
+        playerName: r.player_name,
+        matchId: r.match_id,
+        points: r.points,
+        guessedAt: r.guessed_at
+      }))
+    );
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/rooms/join - Add a player to a room (via room invite token)
+app.post('/api/rooms/join', async (req, res) => {
+  try {
+    const { playerToken, roomToken } = req.body;
+    if (!playerToken || !roomToken) return res.status(400).json({ error: 'playerToken and roomToken required' });
+
+    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [playerToken]);
+    if (playerResult.rows.length === 0) return res.status(401).json({ error: 'Invalid player token' });
+    const roomResult = await pool.query('SELECT id, name FROM rooms WHERE invite_token = $1', [roomToken]);
+    if (roomResult.rows.length === 0) return res.status(404).json({ error: 'Invalid room token' });
+
+    await pool.query(
+      'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [roomResult.rows[0].id, playerResult.rows[0].id]
+    );
+    res.json({ success: true, roomName: roomResult.rows[0].name });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/rooms - List rooms a player belongs to
+app.get('/api/rooms', async (req, res) => {
+  try {
+    const { playerToken } = req.query;
+    if (!playerToken) return res.status(400).json({ error: 'playerToken required' });
+    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [playerToken]);
+    if (playerResult.rows.length === 0) return res.status(404).json({ error: 'Player not found' });
+    const result = await pool.query(
+      `SELECT r.id, r.name, r.invite_token
+       FROM room_players rp JOIN rooms r ON r.id = rp.room_id
+       WHERE rp.player_id = $1`,
+      [playerResult.rows[0].id]
+    );
     res.json(result.rows.map(r => ({
       id: r.id,
-      playerId: r.player_id,
-      playerName: r.player_name,
-      matchId: r.match_id,
-      points: r.points,
-      guessedAt: r.guessed_at
+      name: r.name,
+      inviteToken: r.invite_token
     })));
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -213,17 +389,29 @@ app.post('/api/guess', async (req, res) => {
   }
 });
 
-// GET /api/leaderboard - Get ranked leaderboard
+// GET /api/leaderboard - Get ranked leaderboard (room-scoped)
 app.get('/api/leaderboard', async (req, res) => {
   try {
-    const leaderboard = await getLeaderboard();
+    const { roomId } = req.query;
+    let resolvedRoomId = roomId ? parseInt(roomId) : null;
+
+    // If no roomId, fall back to first room of the request — but keep API simple:
+    // require roomId to be set (or pass first available)
+    if (!resolvedRoomId) {
+      // Find any room (for admin / first room fallback)
+      const any = await pool.query('SELECT id FROM rooms ORDER BY id LIMIT 1');
+      if (any.rows.length === 0) return res.json([]);
+      resolvedRoomId = any.rows[0].id;
+    }
+
+    const leaderboard = await getLeaderboard(resolvedRoomId);
     res.json(leaderboard);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-async function getLeaderboard() {
+async function getLeaderboard(roomId) {
   const sql = `
     SELECT
       p.name,
@@ -234,14 +422,15 @@ async function getLeaderboard() {
           ELSE 0
         END
       ), 0) as total_points
-    FROM players p
+    FROM room_players rp
+    JOIN players p ON p.id = rp.player_id
     LEFT JOIN guesses g ON p.id = g.player_id
     LEFT JOIN matches m ON g.match_id = m.id
-    WHERE p.is_active = 1
+    WHERE rp.room_id = $1 AND p.is_active = 1
     GROUP BY p.id, p.name
     ORDER BY total_points DESC
   `;
-  const result = await pool.query(sql);
+  const result = await pool.query(sql, [roomId]);
   return result.rows.map((r, i) => ({
     rank: i + 1,
     name: r.name,
@@ -341,6 +530,110 @@ app.put('/api/admin/players/:id', requireAdmin, async (req, res) => {
     params.push(id);
     const result = await pool.query(`UPDATE players SET ${updates.join(', ')} WHERE id = $${i}`, params);
     if (result.rowCount === 0) return res.status(404).json({ error: 'Player not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/rooms - Create a new room
+app.post('/api/admin/rooms', requireAdmin, async (req, res) => {
+  try {
+    const { name } = req.body;
+    if (!name) return res.status(400).json({ error: 'name required' });
+    const inviteToken = 'room_' + crypto.randomBytes(6).toString('hex');
+    const result = await pool.query(
+      'INSERT INTO rooms (name, invite_token) VALUES ($1, $2) RETURNING id',
+      [name, inviteToken]
+    );
+    const room = {
+      id: result.rows[0].id,
+      name,
+      inviteToken,
+      inviteUrl: `${BASE_URL}/?room=${inviteToken}`
+    };
+    console.log(`Created room: ${name} → ${room.inviteUrl}`);
+    res.status(201).json({ room });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/admin/rooms - List all rooms
+app.get('/api/admin/rooms', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM rooms ORDER BY created_at DESC');
+    const rooms = await Promise.all(result.rows.map(async r => {
+      const members = await pool.query(
+        `SELECT p.id, p.name, p.invite_token, rp.joined_at
+         FROM room_players rp JOIN players p ON p.id = rp.player_id
+         WHERE rp.room_id = $1`,
+        [r.id]
+      );
+      return {
+        id: r.id,
+        name: r.name,
+        inviteToken: r.invite_token,
+        inviteUrl: `${BASE_URL}/?room=${r.invite_token}`,
+        createdAt: r.created_at,
+        memberCount: members.rows.length
+      };
+    }));
+    res.json(rooms);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/rooms/:id - Delete a room
+app.delete('/api/admin/rooms/:id', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('DELETE FROM rooms WHERE id = $1', [id]);
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Room not found' });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/rooms/:id/players - Add player to room
+app.post('/api/admin/rooms/:id/players', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { playerId } = req.body;
+    if (!playerId) return res.status(400).json({ error: 'playerId required' });
+    await pool.query(
+      'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [id, playerId]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /api/admin/rooms/:id/players/:playerId - Remove player from room
+app.delete('/api/admin/rooms/:id/players/:playerId', requireAdmin, async (req, res) => {
+  try {
+    const { id, playerId } = req.params;
+    await pool.query('DELETE FROM room_players WHERE room_id = $1 AND player_id = $2', [id, playerId]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/admin/matches/:id/lock - Lock a match (reveal guesses)
+app.post('/api/admin/matches/:id/lock', requireAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query(
+      'UPDATE matches SET is_locked = true WHERE id = $1 RETURNING id',
+      [id]
+    );
+    if (result.rowCount === 0) return res.status(404).json({ error: 'Match not found' });
+    broadcast({ type: 'match_locked', matchId: id });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -45,6 +45,36 @@ async function setResult(matchId, resultScore, resultPoints) {
   console.log(`✓ Updated: ${matchId} → ${resultScore} (${resultPoints} pts)`);
 }
 
+async function lockMatch(matchId) {
+  await apiFetch(`/api/admin/matches/${matchId}/lock`, { method: 'POST' });
+  console.log(`✓ Locked match: ${matchId}`);
+}
+
+async function createRoom(name) {
+  const data = await apiFetch('/api/admin/rooms', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  });
+  console.log(`\n✓ Created room: ${name}`);
+  console.log(`  Token: ${data.room.inviteToken}`);
+  console.log(`  URL:   ${data.room.inviteUrl}\n`);
+  return data.room;
+}
+
+async function listRooms() {
+  const rooms = await apiFetch('/api/admin/rooms');
+  if (rooms.length === 0) {
+    console.log('\nNo rooms yet. Use "addroom" to create one.\n');
+    return;
+  }
+  console.log('\nRooms:\n');
+  for (const r of rooms) {
+    console.log(`  [${r.id}] ${r.name} (${r.memberCount} üye) ${r.inviteToken}`);
+    console.log(`       ${r.inviteUrl}`);
+  }
+  console.log();
+}
+
 async function addPlayer(name, editUntil) {
   const expires = editUntil || DEFAULT_EDIT_UNTIL;
   const data = await apiFetch('/api/admin/players', {
@@ -79,7 +109,10 @@ async function resetGuesses(force = false) {
 function displayMatches(matches) {
   console.log('\nMatches:\n');
   matches.forEach(m => {
-    const status = m.played ? `✓ ${m.result_score} (${m.result_points}pts)` : '○ Pending';
+    let status;
+    if (m.played) status = `✓ ${m.result_score} (${m.result_points}pts)`;
+    else if (m.is_locked) status = '🔒 Locked';
+    else status = '○ Pending';
     const name = `${m.team} vs ${m.opponent} (${m.home_or_away})`;
     console.log(`  ${String(m.id).padEnd(10)} [${String(m.team).padEnd(12)} ${m.tournament}] ${name.padEnd(50)} ${status}`);
   });
@@ -128,14 +161,17 @@ async function main() {
   console.log(`  Default expiry: ${DEFAULT_EDIT_UNTIL}`);
   console.log(`  Database: PostgreSQL (Neon)\n`);
   console.log('Commands:');
-  console.log('  list              - Show all matches');
+  console.log('  list                  - Show all matches (with lock status)');
   console.log('  set <id> <score> <pts>  - Set match result (pts: 0/1/3)');
-  console.log('  players           - Show all players + invite URLs');
+  console.log('  lock <id>             - Lock a match (reveal guesses)');
+  console.log('  players               - Show all players + invite URLs');
   console.log('  addplayer <name> [date]  - Create player (date: YYYY-MM-DD, default: ' + DEFAULT_EDIT_UNTIL + ')');
-  console.log('  removeplayer <id> - Delete player (and their guesses)');
-  console.log('  reset             - Delete ALL guesses (debug - requires "yes" confirmation)');
-  console.log('  server            - Show current server URL');
-  console.log('  quit              - Exit\n');
+  console.log('  removeplayer <id>     - Delete player (and their guesses)');
+  console.log('  rooms                 - List all rooms + invite URLs');
+  console.log('  addroom <name>        - Create a new room');
+  console.log('  reset                 - Delete ALL guesses (debug - requires "yes" confirmation)');
+  console.log('  server                - Show current server URL');
+  console.log('  quit                  - Exit\n');
 
   const matches = await loadMatches();
   displayMatches(matches);
@@ -176,6 +212,39 @@ async function main() {
       }
       try {
         await setResult(matchId, resultScore, resultPoints);
+      } catch (e) {
+        console.log('Error:', e.message);
+      }
+      continue;
+    }
+
+    if (cmd === 'lock' && parts.length >= 2) {
+      const matchId = parts[1];
+      try {
+        await lockMatch(matchId);
+      } catch (e) {
+        console.log('Error:', e.message);
+      }
+      continue;
+    }
+
+    if (cmd === 'addroom') {
+      const name = trimmed.substring('addroom'.length).trim();
+      if (!name) {
+        console.log('Usage: addroom <name>');
+        continue;
+      }
+      try {
+        await createRoom(name);
+      } catch (e) {
+        console.log('Error:', e.message);
+      }
+      continue;
+    }
+
+    if (cmd === 'rooms' || cmd === 'r') {
+      try {
+        await listRooms();
       } catch (e) {
         console.log('Error:', e.message);
       }
@@ -237,7 +306,7 @@ async function main() {
       continue;
     }
 
-    console.log('Unknown command. Try: list, set, players, addplayer, removeplayer, reset, server, quit');
+    console.log('Unknown command. Try: list, set, lock, players, addplayer, removeplayer, rooms, addroom, reset, server, quit');
   }
 
   rl.close();

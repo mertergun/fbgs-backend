@@ -419,6 +419,21 @@
         .theme-toggle:hover { transform: scale(1.05); }
         .theme-toggle svg { width: 1.25rem; height: 1.25rem; }
 
+        /* Lock icon for matches */
+        .lock-icon {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.2rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.15rem 0.5rem;
+            border-radius: 9999px;
+        }
+        .lock-icon.unlocked { background: #d1fae5; color: #065f46; }
+        .lock-icon.locked   { background: #e5e7eb; color: #4b5563; }
+        html.dark .lock-icon.unlocked { background: #064e3b; color: #6ee7b7; }
+        html.dark .lock-icon.locked   { background: #334155; color: #cbd5e1; }
+
         /* Ghost / outline button (for secondary actions) */
         .btn-ghost {
             background: transparent;
@@ -455,6 +470,7 @@
     <header class="flex items-center justify-between mb-6 mt-2">
         <h1 class="text-3xl font-bold gradient-text">Avrupa'da Türk Takımları</h1>
         <div class="flex items-center gap-3">
+            <div id="currentRoomBadge" class="text-xs font-semibold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full hidden" title="Aktif oda"></div>
             <div id="editUntilBanner" class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full hidden"></div>
             <div id="expiredBanner" class="text-xs font-semibold bg-red-100 text-red-800 px-3 py-1 rounded-full hidden"></div>
         </div>
@@ -478,6 +494,13 @@
                     <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
                     <button id="viewMatchListButton" class="btn-ghost text-sm">Maç Listesi</button>
                 </div>
+            </div>
+
+            <!-- Room join UI -->
+            <div class="flex flex-wrap items-center gap-2 mb-4 text-sm">
+                <input type="text" id="roomTokenInput" placeholder="room_xxxxxxxxxxxx (Oda kodu)" class="flex-1 min-w-0 rounded-md border border-gray-300 px-3 py-1.5 font-mono text-xs">
+                <button id="joinRoomButton" class="bg-indigo-600 text-white font-semibold py-1.5 px-3 rounded-md hover:bg-indigo-700 transition-colors text-xs">Odaya Katıl</button>
+                <div id="joinRoomError" class="text-xs text-red-600 hidden"></div>
             </div>
 
             <!-- Team summary cards -->
@@ -578,7 +601,9 @@ const STORAGE_KEY_TOKEN = 'fbgs-invite-token';
 let ws = null;
 let allMatches = [];
 let allGuesses = [];
+let allLeaderboard = [];
 let currentPlayer = null; // { id, name, inviteToken, editUntil, canEdit, expired }
+let currentRoom = null;   // { id, name, inviteToken }
 let currentMatchIndex = 0;
 let isTouch = false;
 let isDragging = false;
@@ -597,12 +622,13 @@ function initApp() {
     setupEventListeners();
     connectWebSocket();
 
-    // Check for token in URL
+    // Check for token in URL (player or room)
     const urlParams = new URLSearchParams(window.location.search);
     const urlToken = urlParams.get('token');
+    const urlRoom = urlParams.get('room');
 
     const storedToken = localStorage.getItem(STORAGE_KEY_TOKEN);
-    const tokenToCheck = urlToken || storedToken;
+    const tokenToCheck = urlToken || urlRoom || storedToken;
 
     if (tokenToCheck) {
         validateToken(tokenToCheck);
@@ -637,6 +663,23 @@ function setupEventListeners() {
     });
     document.getElementById('nextMatchButton').addEventListener('click', () => {
         if (currentMatchIndex < allMatches.length - 1) { currentMatchIndex++; updateCarousel(); }
+    });
+
+    document.getElementById('joinRoomButton').addEventListener('click', () => {
+        const roomToken = document.getElementById('roomTokenInput').value.trim();
+        if (!roomToken) {
+            showJoinRoomError('Oda kodu gerekli');
+            return;
+        }
+        const playerToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+        if (!playerToken) {
+            showJoinRoomError('Önce kendi davet linkinle giriş yap');
+            return;
+        }
+        joinRoom(playerToken, roomToken);
+    });
+    document.getElementById('roomTokenInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') document.getElementById('joinRoomButton').click();
     });
 
     setupCarouselGestures();
@@ -706,7 +749,18 @@ function validateToken(token) {
                 showTokenError(data.error);
                 return;
             }
+            if (data.type === 'room') {
+                // Room link — auto-join if user has player token, else prompt
+                const storedPlayerToken = localStorage.getItem(STORAGE_KEY_TOKEN);
+                if (storedPlayerToken && storedPlayerToken.startsWith('inv_')) {
+                    joinRoom(storedPlayerToken, token);
+                } else {
+                    showTokenError('Önce kendi davet linkinle giriş yap, sonra odaya katıl.');
+                }
+                return;
+            }
             currentPlayer = data.player;
+            currentRoom = (data.rooms && data.rooms[0]) ? data.rooms[0] : null;
             localStorage.setItem(STORAGE_KEY_TOKEN, token);
 
             // Update URL without reload
@@ -729,6 +783,7 @@ function validateToken(token) {
                     expiredBanner.classList.remove('hidden');
                 }
             }
+            updateRoomBadge();
 
             document.getElementById('tokenInput').value = '';
             loadAllData();
@@ -738,6 +793,45 @@ function validateToken(token) {
             console.error('Token validation error:', err);
             showTokenError('Sunucu hatası - daha sonra tekrar dene');
         });
+}
+
+function updateRoomBadge() {
+    const badge = document.getElementById('currentRoomBadge');
+    if (currentRoom) {
+        badge.textContent = '🏠 ' + currentRoom.name;
+        badge.title = 'Aktif oda: ' + currentRoom.name;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function joinRoom(playerToken, roomToken) {
+    fetch(API_BASE + '/api/rooms/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerToken, roomToken })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            showJoinRoomError(data.error);
+            return;
+        }
+        document.getElementById('joinRoomError').classList.add('hidden');
+        document.getElementById('roomTokenInput').value = '';
+        // Re-validate the player token to refresh the room list
+        validateToken(playerToken);
+    })
+    .catch(err => {
+        showJoinRoomError('Odaya katılınamadı: ' + err.message);
+    });
+}
+
+function showJoinRoomError(msg) {
+    const el = document.getElementById('joinRoomError');
+    el.textContent = msg;
+    el.classList.remove('hidden');
 }
 
 function showTokenError(msg) {
@@ -757,8 +851,27 @@ function connectWebSocket() {
     ws.onmessage = (event) => {
         try {
             const data = JSON.parse(event.data);
-            if (data.type === 'leaderboard_update' || data.type === 'match_locked') {
+            if (data.type === 'leaderboard_update') {
                 loadAllData();
+            } else if (data.type === 'match_locked') {
+                // Just reload matches to update lock badges (no full re-render)
+                const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
+                fetch(API_BASE + '/api/matches?token=' + encodeURIComponent(token))
+                    .then(r => r.json())
+                    .then(matches => {
+                        allMatches = matches;
+                        // Update lock badge on the affected card in the carousel
+                        const card = document.getElementById('match-card-' + data.matchId);
+                        if (card) {
+                            const lockEl = card.querySelector('.lock-icon');
+                            if (lockEl) {
+                                lockEl.className = 'lock-icon locked';
+                                lockEl.title = 'Tahminler kilitli';
+                                lockEl.innerHTML = '🔒 Kilitli';
+                            }
+                        }
+                        populateMatchList(currentMatchListFilter);
+                    });
             }
         } catch (err) { console.error('WS parse error:', err); }
     };
@@ -772,16 +885,20 @@ function connectWebSocket() {
 function loadAllData(silent = false) {
     if (!silent) showLoading(true);
     const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
+    const leaderboardUrl = currentRoom
+        ? API_BASE + '/api/leaderboard?roomId=' + currentRoom.id
+        : API_BASE + '/api/leaderboard';
     Promise.all([
         fetch(API_BASE + '/api/matches?token=' + encodeURIComponent(token)).then(r => r.json()),
-        fetch(API_BASE + '/api/guesses').then(r => r.json())
-    ]).then(([matches, guesses]) => {
+        fetch(API_BASE + '/api/guesses?token=' + encodeURIComponent(token)).then(r => r.json()),
+        fetch(leaderboardUrl).then(r => r.json())
+    ]).then(([matches, guesses, leaderboard]) => {
         allMatches = matches;
         allGuesses = guesses;
+        allLeaderboard = leaderboard;
         renderLeaderboard();
         populateMatchList(currentMatchListFilter);
-        // Refresh only the current carousel card (do NOT rebuild the whole carousel,
-        // otherwise the position resets and the user loses their place).
+        // Rebuild the whole carousel only if needed (e.g., on lock change) — preserve position
         if (allMatches[currentMatchIndex]) {
             const cur = allMatches[currentMatchIndex];
             const curCard = document.getElementById('match-card-' + cur.id);
@@ -1237,7 +1354,10 @@ function populateMatchList(filter) {
                         ${match.matchDate ? '📅 ' + formatTurkishDate(match.matchDate) : ''}
                     </p>
                 </div>
-                <span class="status-badge ${statusClass}">${statusText}</span>
+                <div class="flex flex-col items-end gap-1">
+                    <span class="status-badge ${statusClass}">${statusText}</span>
+                    <span class="lock-icon ${match.isLocked ? 'locked' : 'unlocked'}" title="${match.isLocked ? 'Tahminler kilitli' : 'Tahminler açık'}">${match.isLocked ? '🔒 Kilitli' : '🔓 Açık'}</span>
+                </div>
             </div>
             <!-- League context (small, muted) -->
             <div class="space-y-1 text-xs text-gray-400">
@@ -1350,11 +1470,13 @@ function populateMatchesCarousel() {
         card.innerHTML = '<div class="card ' + teamClass + '" style="border-left-width:4px;">' +
             // Prev league context (small, muted)
             (match.prevLeagueContext ? '<p class="text-xs text-gray-400 mb-1">⬆ Önceki: ' + match.prevLeagueContext + '</p>' : '') +
-            // Main title: tournament badge + team name + vs + opponent + home/away inline
+            // Main title: tournament badge + team name + vs + opponent + home/away inline + lock badge
             '<div class="flex items-center gap-2 flex-wrap mb-2">' +
             getTournamentBadge(match.tournament) +
             '<h3 class="text-xl font-bold text-gray-800">' + match.team + ' <span class="text-gray-400">vs</span> ' + match.opponent + '</h3>' +
             '<span class="text-sm">' + getHomeAwayLabel(match.homeOrAway) + '</span>' +
+            '<span class="lock-icon ' + (match.isLocked ? 'locked' : 'unlocked') + '" title="' + (match.isLocked ? 'Tahminler kilitli' : 'Tahminler açık') + '">' +
+            (match.isLocked ? '🔒' : '🔓') + ' ' + (match.isLocked ? 'Kilitli' : 'Açık') + '</span>' +
             '</div>' +
             // Date
             (match.matchDate ? '<p class="text-sm font-medium text-indigo-600 mb-1">📅 ' + formatTurkishDate(match.matchDate) + '</p>' : '') +
