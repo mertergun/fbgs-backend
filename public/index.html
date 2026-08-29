@@ -487,20 +487,26 @@
         </div>
 
         <!-- Scoreboard View -->
+
+        <!-- Join Room View -->
+        <div id="joinRoomView" class="card hidden">
+            <div class="flex flex-col items-center text-center">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">🏠 Odaya Katıl</h2>
+                <p class="text-gray-600 mb-6">Yöneticinden aldığın oda davet kodunu gir.</p>
+                <input type="text" id="roomCodeInput" placeholder="room_xxxxxxxx" class="w-full sm:w-2/3 rounded-md border border-gray-300 px-4 py-3 text-center font-mono text-lg mb-4">
+                <button id="doJoinRoomButton" class="w-full sm:w-2/3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition-colors mb-3">Odaya Katıl</button>
+                <button id="cancelJoinRoomButton" class="text-sm text-gray-500 hover:text-gray-700">Vazgeç</button>
+                <div id="joinRoomError" class="mt-3 text-red-600 text-sm hidden"></div>
+            </div>
+        </div>
         <div id="scoreboardView" class="card hidden">
             <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
                 <h2 class="text-2xl font-bold text-gray-800" title="Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer">Puan Durumu ⓘ</h2>
                 <div class="flex space-x-2">
+                    <button id="joinRoomNavButton" class="bg-indigo-100 text-indigo-700 font-semibold py-2 px-4 rounded-lg hover:bg-indigo-200 transition-colors text-sm">🏠 Odaya Katıl</button>
                     <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
                     <button id="viewMatchListButton" class="btn-ghost text-sm">Maç Listesi</button>
                 </div>
-            </div>
-
-            <!-- Room join UI -->
-            <div class="flex flex-wrap items-center gap-2 mb-4 text-sm">
-                <input type="text" id="roomTokenInput" placeholder="room_xxxxxxxxxxxx (Oda kodu)" class="flex-1 min-w-0 rounded-md border border-gray-300 px-3 py-1.5 font-mono text-xs">
-                <button id="joinRoomButton" class="bg-indigo-600 text-white font-semibold py-1.5 px-3 rounded-md hover:bg-indigo-700 transition-colors text-xs">Odaya Katıl</button>
-                <div id="joinRoomError" class="text-xs text-red-600 hidden"></div>
             </div>
 
             <!-- Team summary cards -->
@@ -665,21 +671,11 @@ function setupEventListeners() {
         if (currentMatchIndex < allMatches.length - 1) { currentMatchIndex++; updateCarousel(); }
     });
 
-    document.getElementById('joinRoomButton').addEventListener('click', () => {
-        const roomToken = document.getElementById('roomTokenInput').value.trim();
-        if (!roomToken) {
-            showJoinRoomError('Oda kodu gerekli');
-            return;
-        }
-        const playerToken = localStorage.getItem(STORAGE_KEY_TOKEN);
-        if (!playerToken) {
-            showJoinRoomError('Önce kendi davet linkinle giriş yap');
-            return;
-        }
-        joinRoom(playerToken, roomToken);
-    });
-    document.getElementById('roomTokenInput').addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') document.getElementById('joinRoomButton').click();
+    document.getElementById('joinRoomNavButton').addEventListener('click', showJoinRoomView);
+    document.getElementById('doJoinRoomButton').addEventListener('click', doJoinRoom);
+    document.getElementById('cancelJoinRoomButton').addEventListener('click', () => showView('scoreboard'));
+    document.getElementById('roomCodeInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') doJoinRoom();
     });
 
     setupCarouselGestures();
@@ -750,10 +746,25 @@ function validateToken(token) {
                 return;
             }
             if (data.type === 'room') {
-                // Room link — auto-join if user has player token, else prompt
+                // Room token — pre-fill the join room input and route to the dedicated view
                 const storedPlayerToken = localStorage.getItem(STORAGE_KEY_TOKEN);
                 if (storedPlayerToken && storedPlayerToken.startsWith('inv_')) {
-                    joinRoom(storedPlayerToken, token);
+                    // Re-validate the player token first to set currentPlayer
+                    fetch(API_BASE + '/api/invite/' + encodeURIComponent(storedPlayerToken))
+                        .then(r => r.json())
+                        .then(pd => {
+                            if (pd.error || pd.type !== 'player') {
+                                // Player token lost/expired — go to login first
+                                showTokenError('Önce kendi davet linkinle giriş yap.');
+                                return;
+                            }
+                            currentPlayer = pd.player;
+                            currentRoom = (pd.rooms && pd.rooms[0]) ? pd.rooms[0] : null;
+                            localStorage.setItem(STORAGE_KEY_TOKEN, storedPlayerToken);
+                            updateRoomBadge();
+                            document.getElementById('roomCodeInput').value = token;
+                            showView('joinRoom');
+                        });
                 } else {
                     showTokenError('Önce kendi davet linkinle giriş yap, sonra odaya katıl.');
                 }
@@ -806,32 +817,50 @@ function updateRoomBadge() {
     }
 }
 
-function joinRoom(playerToken, roomToken) {
-    fetch(API_BASE + '/api/rooms/join', {
+function joinRoom(playerToken, roomInviteToken) {
+    return fetch(API_BASE + '/api/rooms/join', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ playerToken, roomToken })
-    })
-    .then(r => r.json())
-    .then(data => {
-        if (data.error) {
-            showJoinRoomError(data.error);
-            return;
-        }
-        document.getElementById('joinRoomError').classList.add('hidden');
-        document.getElementById('roomTokenInput').value = '';
-        // Re-validate the player token to refresh the room list
-        validateToken(playerToken);
-    })
-    .catch(err => {
-        showJoinRoomError('Odaya katılınamadı: ' + err.message);
-    });
+        body: JSON.stringify({ invite_token: playerToken, room_invite_token: roomInviteToken })
+    }).then(r => r.json());
 }
 
 function showJoinRoomError(msg) {
     const el = document.getElementById('joinRoomError');
     el.textContent = msg;
     el.classList.remove('hidden');
+}
+
+function showJoinRoomView() {
+    showView('joinRoom');
+    document.getElementById('roomCodeInput').value = '';
+    document.getElementById('joinRoomError').classList.add('hidden');
+}
+
+function doJoinRoom() {
+    if (!currentPlayer) {
+        showJoinRoomError('Önce kendi davet linkinle giriş yap');
+        return;
+    }
+    const roomCode = document.getElementById('roomCodeInput').value.trim();
+    if (!roomCode) {
+        showJoinRoomError('Oda kodu gerekli');
+        return;
+    }
+    document.getElementById('joinRoomError').classList.add('hidden');
+    joinRoom(currentPlayer.inviteToken, roomCode).then(data => {
+        if (data.error) {
+            showJoinRoomError(data.error);
+            return;
+        }
+        currentRoom = data.room;
+        updateRoomBadge();
+        document.getElementById('roomCodeInput').value = '';
+        loadAllData();
+        showView('scoreboard');
+    }).catch(() => {
+        showJoinRoomError('Sunucu hatası - tekrar dene');
+    });
 }
 
 function showTokenError(msg) {
@@ -1365,12 +1394,13 @@ function populateMatchList(filter) {
                 ${match.nextLeagueContext ? '<p>⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : ''}
             </div>
             <div class="flex items-center justify-between mt-3">
-                <div class="flex space-x-2">
-                    <div class="flex flex-col items-center"><span class="points-badge points-0">${stats[0]}</span><span class="text-xs text-gray-500 mt-1">0 puan</span></div>
-                    <div class="flex flex-col items-center"><span class="points-badge points-1">${stats[1]}</span><span class="text-xs text-gray-500 mt-1">1 puan</span></div>
-                    <div class="flex flex-col items-center"><span class="points-badge points-3">${stats[3]}</span><span class="text-xs text-gray-500 mt-1">3 puan</span></div>
-                </div>
-                <div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">${mostPopular}</span></div>
+                ${match.isLocked || match.played ? '<div class="flex space-x-2">' +
+                    '<div class="flex flex-col items-center"><span class="points-badge points-0">' + stats[0] + '</span><span class="text-xs text-gray-500 mt-1">0 puan</span></div>' +
+                    '<div class="flex flex-col items-center"><span class="points-badge points-1">' + stats[1] + '</span><span class="text-xs text-gray-500 mt-1">1 puan</span></div>' +
+                    '<div class="flex flex-col items-center"><span class="points-badge points-3">' + stats[3] + '</span><span class="text-xs text-gray-500 mt-1">3 puan</span></div>' +
+                    '</div>' :
+                    '<div class="flex items-center gap-2 text-gray-400"><span>🔒</span><span class="text-sm italic">Diğer tahminler gizli</span></div>'}
+                ${match.isLocked || match.played ? '<div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">' + mostPopular + '</span></div>' : ''}
             </div>
             ${!match.played && currentPlayer && currentPlayer.canEdit ? `
             <div class="flex space-x-2 mt-3 guess-actions" data-match-id="${match.id}">
@@ -1379,6 +1409,7 @@ function populateMatchList(filter) {
                 <button data-points="3" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">3</button>
             </div>` : ''}
             ${myGuessHTML}
+            ${match.isLocked || match.played ? `
             <div class="mt-4">
                 <div class="match-detail-toggle flex justify-between items-center bg-gray-50 p-2 rounded-lg cursor-pointer">
                     <span class="font-medium text-gray-700">Oyuncu Tahminleri (${matchGuesses.length})</span>
@@ -1387,7 +1418,7 @@ function populateMatchList(filter) {
                 <div class="player-guesses-container overflow-hidden mt-2">
                     <div class="p-3 bg-gray-50 rounded-lg" id="guess-list-${match.id}"></div>
                 </div>
-            </div>
+            </div>` : ''}
         `;
         container.appendChild(div);
         const toggle = div.querySelector('.match-detail-toggle');

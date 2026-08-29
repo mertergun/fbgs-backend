@@ -300,22 +300,28 @@ app.get('/api/guesses', async (req, res) => {
   }
 });
 
-// POST /api/rooms/join - Add a player to a room (via room invite token)
+// POST /api/rooms/join - Add a player to a room
 app.post('/api/rooms/join', async (req, res) => {
   try {
-    const { playerToken, roomToken } = req.body;
-    if (!playerToken || !roomToken) return res.status(400).json({ error: 'playerToken and roomToken required' });
+    const { invite_token, room_invite_token } = req.body;
+    if (!invite_token || !room_invite_token) {
+      return res.status(400).json({ error: 'invite_token and room_invite_token required' });
+    }
 
-    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [playerToken]);
-    if (playerResult.rows.length === 0) return res.status(401).json({ error: 'Invalid player token' });
-    const roomResult = await pool.query('SELECT id, name FROM rooms WHERE invite_token = $1', [roomToken]);
-    if (roomResult.rows.length === 0) return res.status(404).json({ error: 'Invalid room token' });
+    const playerResult = await pool.query('SELECT id FROM players WHERE invite_token = $1', [invite_token]);
+    if (playerResult.rows.length === 0) {
+      return res.status(401).json({ error: 'Geçersiz davet kodu. Lütfen yöneticinle iletişime geç.' });
+    }
+    const roomResult = await pool.query('SELECT id, name FROM rooms WHERE invite_token = $1', [room_invite_token]);
+    if (roomResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Oda kodu bulunamadı. Lütfen doğru kodu girdiğinden emin ol.' });
+    }
 
     await pool.query(
       'INSERT INTO room_players (room_id, player_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [roomResult.rows[0].id, playerResult.rows[0].id]
     );
-    res.json({ success: true, roomName: roomResult.rows[0].name });
+    res.json({ success: true, roomName: roomResult.rows[0].name, room: { id: roomResult.rows[0].id, name: roomResult.rows[0].name, inviteToken: room_invite_token } });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
