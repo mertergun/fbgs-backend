@@ -314,6 +314,108 @@
         html.dark .bg-gray-50  { background-color: var(--bg-card-muted) !important; }
         html.dark .bg-white    { background-color: var(--bg-card) !important; }
 
+        /* =============================================
+           RESPONSIVE BREAKPOINTS & LAYOUT UTILITIES
+           ============================================= */
+
+        /* --- Header: title + badge row both wrap gracefully --- */
+        @media (max-width: 639px) {
+            #app-header h1 { font-size: 1.35rem !important; }
+            #header-badges { gap: 0.4rem; }
+            #header-badges > div { font-size: 0.65rem !important; padding: 0.25rem 0.6rem !important; }
+        }
+
+        /* --- Team summary: 2-col on mobile, 4-col on tablet+ --- */
+        @media (min-width: 640px) {
+            #teamSummaryRow {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        @media (min-width: 640px) and (max-width: 1023px) {
+            .team-card { padding: 0.5rem !important; }
+            .team-card .text-xl { font-size: 1rem !important; }
+            .team-card .text-xs { font-size: 0.6rem !important; }
+        }
+
+        /* --- Scoreboard action buttons: stack on mobile --- */
+        @media (max-width: 479px) {
+            #scoreboardView .flex.space-x-2 {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            #scoreboardView .flex.space-x-2 button {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        /* --- Leaderboard player cards --- */
+        @media (max-width: 639px) {
+            .lb-earned-label { display: none; }  /* hide verbose label on mobile */
+            #leaderboardList .text-2xl { font-size: 1.25rem; }
+            .lb-earned-wrap { margin-top: 0; }
+        }
+        @media (min-width: 640px) {
+            .lb-earned-mobile-label { display: none; }
+        }
+
+        /* --- Leaderboard team result grid: tighter on small screens --- */
+        @media (max-width: 479px) {
+            .team-result-grid {
+                grid-template-columns: 1fr;
+                gap: 0.25rem;
+            }
+            .team-result-item {
+                font-size: 0.7rem;
+            }
+        }
+
+        /* --- Match filter buttons: wrap and stay readable on small screens --- */
+        @media (max-width: 479px) {
+            #matchListView .flex.space-x-2 {
+                flex-wrap: wrap;
+                gap: 0.35rem;
+            }
+            #matchListView .match-filter-btn {
+                font-size: 0.65rem !important;
+                padding: 0.25rem 0.5rem !important;
+            }
+        }
+
+        /* --- Carousel: show a swipe hint on mobile --- */
+        @media (max-width: 767px) {
+            #carouselSwipeHint { display: flex; }
+        }
+
+        /* --- Join room / token input: force full-width on very small screens --- */
+        @media (max-width: 479px) {
+            #joinRoomView input,
+            #joinRoomView button,
+            #tokenInputView input,
+            #tokenInputView button {
+                width: 100% !important;
+            }
+        }
+
+        /* --- Player guesses stats in match list: prevent overflow --- */
+        @media (max-width: 479px) {
+            .match-list-item .flex.space-x-2 {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .points-badge {
+                width: 1.75rem;
+                height: 1.75rem;
+                font-size: 0.65rem;
+            }
+        }
+
+        /* --- Leaderboard player name row: trophy doesn't squash name --- */
+        @media (max-width: 479px) {
+            .lb-rank { font-size: 1.1rem !important; }
+            .lb-name { font-size: 0.95rem !important; }
+        }
+
         /* Team border colors — slightly lighter in dark mode for visibility */
         html.dark .team-gs  { border-left-color: #ff4d4d !important; }
         html.dark .team-fb  { border-left-color: #ffe83d !important; }
@@ -467,9 +569,9 @@
 </button>
 
 <div class="container">
-    <header class="flex items-center justify-between mb-6 mt-2">
+    <header id="app-header" class="flex items-center justify-between flex-wrap gap-3 mb-6 mt-2">
         <h1 class="text-3xl font-bold gradient-text">Avrupa'da Türk Takımları</h1>
-        <div class="flex items-center gap-3">
+        <div id="header-badges" class="flex items-center gap-2 sm:gap-3 flex-wrap">
             <div id="currentRoomBadge" class="text-xs font-semibold bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full hidden" title="Aktif oda"></div>
             <div id="editUntilBanner" class="text-xs font-semibold bg-amber-100 text-amber-800 px-3 py-1 rounded-full hidden"></div>
             <div id="expiredBanner" class="text-xs font-semibold bg-red-100 text-red-800 px-3 py-1 rounded-full hidden"></div>
@@ -528,6 +630,10 @@
                 <button id="nextMatchButton" class="hidden md:block absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white bg-opacity-70 hover:bg-opacity-100 text-blue-600 p-2 rounded-full shadow-md transition-all">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
                 </button>
+            </div>
+            <!-- Swipe hint: only visible on mobile (CSS toggles via media query) -->
+            <div id="carouselSwipeHint" class="hidden justify-center items-center gap-2 mt-2 text-xs text-gray-400">
+                <span>← Kaydır →</span>
             </div>
             <div class="mt-4 text-center text-gray-600">
                 <span id="carouselIndicator">1 / 30</span>
@@ -1327,14 +1433,14 @@ function renderLeaderboard() {
         const div = document.createElement('div');
         div.className = 'p-4 bg-white rounded-lg shadow-sm' + (isMe ? ' ring-2 ring-blue-500' : '');
         div.innerHTML = `
-            <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-3">
-                <div class="flex items-center mb-2 md:mb-0">
-                    <span class="text-2xl font-extrabold text-gray-400 mr-2">#${i + 1}</span>
-                    <span class="font-bold text-lg text-gray-800">${p.name}${trophy}${isMe ? ' <span class="ml-1 text-xs text-blue-600">(Sen)</span>' : ''}</span>
+            <div class="flex flex-row items-center justify-between gap-2 mb-3">
+                <div class="flex items-center min-w-0 flex-1">
+                    <span class="lb-rank text-2xl font-extrabold text-gray-400 mr-2 shrink-0">#${i + 1}</span>
+                    <span class="lb-name font-bold text-lg text-gray-800 truncate">${p.name}${trophy}${isMe ? ' <span class="ml-1 text-xs text-blue-600">(Sen)</span>' : ''}</span>
                 </div>
-                <div class="flex items-center space-x-4 text-sm">
-                    <div>
-                        <div class="text-xs text-gray-500">Doğru tahmin sayısı</div>
+                <div class="flex items-center space-x-2 text-sm shrink-0 lb-earned-wrap">
+                    <div class="text-right">
+                        <div class="text-xs text-gray-500 lb-earned-label">Doğru tahmin sayısı</div>
                         <div class="text-2xl font-extrabold text-green-600">${earnedTotal}</div>
                     </div>
                 </div>
