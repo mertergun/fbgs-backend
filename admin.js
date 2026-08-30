@@ -31,11 +31,25 @@ async function loadMatches() {
   const result = await pool.query('SELECT * FROM matches ORDER BY tournament, team, match_date');
   return result.rows;
 }
-
 async function loadPlayers() {
-  const result = await pool.query('SELECT * FROM players ORDER BY name');
-  return result.rows;
+  const result = await pool.query(`
+    SELECT p.*,
+           r.id as room_id, r.name as room_name, r.invite_token as room_invite_token
+    FROM players p
+    LEFT JOIN room_players rp ON rp.player_id = p.id
+    LEFT JOIN rooms r ON r.id = rp.room_id
+    ORDER BY p.name
+  `);
+  return result.rows.map(row => ({
+    ...row,
+    room: row.room_id ? {
+      id: row.room_id,
+      name: row.room_name,
+      inviteToken: row.room_invite_token
+    } : null
+  }));
 }
+
 
 async function setResult(matchId, resultScore, resultPoints) {
   await apiFetch('/api/admin/results', {

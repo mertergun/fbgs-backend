@@ -29,3 +29,4 @@ data/
 
 # Package lock (we use package-lock.json but not yarn.lock)
 yarn.lock
+/.mcp.json
