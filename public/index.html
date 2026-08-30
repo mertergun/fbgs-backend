@@ -315,6 +315,56 @@
         html.dark .bg-white    { background-color: var(--bg-card) !important; }
 
         /* =============================================
+           AI OPPONENT INTRO BUBBLE
+           ============================================= */
+        .ai-bubble-row {
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+            margin: 0.75rem 0 1rem;
+        }
+        .ai-avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 9999px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 6px rgba(99, 102, 241, 0.35);
+        }
+        .ai-bubble {
+            position: relative;
+            background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+            color: var(--text-primary);
+            border: 1px solid #c7d2fe;
+            border-radius: 0.75rem 0.75rem 0.75rem 0.15rem;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.8rem;
+            line-height: 1.4;
+            max-width: 85%;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+        }
+        .ai-bubble-label {
+            display: block;
+            font-size: 0.6rem;
+            font-weight: 700;
+            color: #6366f1;
+            margin-bottom: 0.15rem;
+            letter-spacing: 0.05em;
+        }
+        html.dark .ai-bubble {
+            background: linear-gradient(135deg, #1e1b4b, #312e81);
+            border-color: #4338ca;
+            color: #e0e7ff;
+        }
+        html.dark .ai-bubble-label { color: #a5b4fc; }
+        html.dark .ai-avatar { box-shadow: 0 2px 6px rgba(99, 102, 241, 0.5); }
+
+        /* =============================================
            RESPONSIVE BREAKPOINTS & LAYOUT UTILITIES
            ============================================= */
 
@@ -726,6 +776,26 @@ let currentMatchListFilter = 'all';
 // ============================================================
 // INIT
 // ============================================================
+// HTML escape helper — used when injecting match.opponentContext into innerHTML.
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    return String(s).replace(/[&<>"']/g, c => (
+        { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]
+    ));
+}
+
+// Renders the AI-generated opponent intro as a chat-bubble card. Returns '' if missing.
+function aiBubbleHTML(text) {
+    if (!text) return '';
+    return '<div class="ai-bubble-row">' +
+        '<div class="ai-avatar" aria-hidden="true">🤖</div>' +
+        '<div class="ai-bubble">' +
+            '<span class="ai-bubble-label">AI</span>' +
+            escapeHtml(text) +
+        '</div>' +
+    '</div>';
+}
+
 function initApp() {
     if (isInitialized) return;
     isInitialized = true;
@@ -1520,6 +1590,7 @@ function populateMatchList(filter) {
                 ${match.prevLeagueContext ? '<p>⬆ Önceki: ' + match.prevLeagueContext + '</p>' : ''}
                 ${match.nextLeagueContext ? '<p>⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : ''}
             </div>
+            ${aiBubbleHTML(match.opponentContext)}
             <div class="flex items-center justify-between mt-3">
                 ${roomUnlocked || match.played ? '<div class="flex space-x-2">' +
                     '<div class="flex flex-col items-center"><span class="points-badge points-0">' + stats[0] + '</span><span class="text-xs text-gray-500 mt-1">0 puan</span></div>' +
@@ -1642,6 +1713,8 @@ function populateMatchesCarousel() {
             (match.matchDate ? '<p class="text-sm font-medium text-indigo-600 mb-1">📅 ' + formatTurkishDate(match.matchDate) + '</p>' : '') +
             // Next league context (small, muted)
             (match.nextLeagueContext ? '<p class="text-xs text-gray-400 mb-2">⬇ Sonraki: ' + match.nextLeagueContext + '</p>' : '') +
+            // AI-generated opponent intro (chat bubble)
+            aiBubbleHTML(match.opponentContext) +
             resultHTML +
             // Guess buttons
             '<div class="mt-4 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">' +

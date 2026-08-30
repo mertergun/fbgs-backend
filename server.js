@@ -219,6 +219,7 @@ function formatMatch(m) {
     matchDate: m.match_date ? (m.match_date.toISOString ? m.match_date.toISOString().split('T')[0] : m.match_date) : null,
     prevLeagueContext: m.prev_league_context,
     nextLeagueContext: m.next_league_context,
+    opponentContext: m.opponent_context,
     played: Boolean(m.played),
     resultScore: m.result_score,
     actualPoints: m.played ? m.result_points : null
