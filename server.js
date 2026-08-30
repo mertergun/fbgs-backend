@@ -365,6 +365,18 @@ app.post('/api/guess', async (req, res) => {
       });
     }
 
+    // Check if the player's room is locked — no guesses accepted when room is locked
+    const roomRow = await pool.query(
+      `SELECT r.is_locked FROM room_players rp JOIN rooms r ON r.id = rp.room_id WHERE rp.player_id = $1 LIMIT 1`,
+      [player.id]
+    );
+    if (roomRow.rows.length > 0 && roomRow.rows[0].is_locked) {
+      return res.status(403).json({
+        error: 'Bu oda kilitlendi. Tahmin kabul edilmiyor.',
+        roomLocked: true
+      });
+    }
+
     const matchResult = await pool.query('SELECT * FROM matches WHERE id = $1', [matchId]);
     if (matchResult.rows.length === 0) {
       return res.status(404).json({ error: 'Match not found' });

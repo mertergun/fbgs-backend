@@ -953,6 +953,11 @@ function submitGuess(matchId, points, buttonEl) {
         return;
     }
 
+    if (currentRoom && currentRoom.isLocked) {
+        showMessage('Bu oda kilitlendi - tahmin kabul edilmiyor', 'error');
+        return;
+    }
+
     const match = allMatches.find(m => m.id === matchId);
     if (!match) return;
     if (match.played) {
@@ -1140,6 +1145,7 @@ function updateGuessButtonState(card, matchId) {
 
     card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(btn => {
         const pts = parseInt(btn.dataset.points);
+        const roomLocked = currentRoom && currentRoom.isLocked;
 
         // Reset classes
         btn.classList.remove(
@@ -1150,7 +1156,27 @@ function updateGuessButtonState(card, matchId) {
         btn.disabled = false;
         btn.style.pointerEvents = '';
 
-        if (match.played) {
+        if (roomLocked || match.played) {
+            // Locked — show selected guess but disable further changes
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            if (myGuess && pts === myGuess.points) {
+                btn.classList.add('bg-blue-400', 'text-white', 'opacity-60', 'cursor-not-allowed');
+            } else {
+                btn.classList.add('bg-gray-200', 'text-gray-800', 'opacity-50', 'cursor-not-allowed');
+            }
+            // For played matches, also show correct/incorrect
+            if (match.played) {
+                if (pts === match.actualPoints) {
+                    btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                    btn.classList.add('bg-green-500', 'text-white');
+                }
+                if (myGuess && pts === myGuess.points && pts !== match.actualPoints) {
+                    btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                    btn.classList.add('bg-red-500', 'text-white');
+                }
+            }
+        } else {
             // Locked
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
@@ -1410,7 +1436,7 @@ function populateMatchList(filter) {
                     '<div class="flex items-center gap-2 text-gray-400"><span>🔒</span><span class="text-sm italic">Diğer tahminler gizli</span></div>'}
                 ${roomUnlocked || match.played ? '<div><span class="text-sm text-gray-500">En Popüler:</span> <span class="font-bold">' + mostPopular + '</span></div>' : ''}
             </div>
-            ${!match.played && currentPlayer && currentPlayer.canEdit ? `
+            ${!match.played && currentPlayer && currentPlayer.canEdit && !(currentRoom && currentRoom.isLocked) ? `
             <div class="flex space-x-2 mt-3 guess-actions" data-match-id="${match.id}">
                 <button data-points="0" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">0</button>
                 <button data-points="1" class="guess-btn guess-btn-mini flex-1 py-1.5 px-2 rounded-lg bg-gray-200 text-gray-800 text-sm font-medium hover:bg-gray-300 transition-colors">1</button>
@@ -1504,7 +1530,7 @@ function populateMatchesCarousel() {
         const card = document.createElement('div');
         card.className = 'carousel-item';
         card.id = 'match-card-' + match.id;
-        const canGuess = currentPlayer && currentPlayer.canEdit && !match.played;
+        const canGuess = currentPlayer && currentPlayer.canEdit && !match.played && !(currentRoom && currentRoom.isLocked);
         const teamClass = match.team === 'Galatasaray' ? 'team-gs' : match.team === 'Fenerbahçe' ? 'team-fb' : match.team === 'Beşiktaş' ? 'team-bjk' : 'team-ts';
 
         const resultHTML = match.played
@@ -1574,11 +1600,22 @@ function highlightSelectedGuess() {
     const card = document.getElementById('match-card-' + match.id);
     if (!card) return;
     const myGuess = allGuesses.find(g => g.matchId === match.id && g.playerName === currentPlayer.name);
+    const roomLocked = currentRoom && currentRoom.isLocked;
     card.querySelectorAll('.guess-btn').forEach(btn => {
         const pts = parseInt(btn.dataset.points);
-        btn.classList.remove('bg-blue-400', 'bg-green-500', 'bg-red-500');
+        btn.disabled = false;
+        btn.style.pointerEvents = '';
+        btn.classList.remove('bg-blue-400', 'bg-green-500', 'bg-red-500', 'opacity-50', 'cursor-not-allowed');
         btn.classList.add('bg-gray-200', 'text-gray-800');
-        if (match.played) {
+        if (roomLocked) {
+            btn.disabled = true;
+            btn.style.pointerEvents = 'none';
+            if (myGuess && pts === myGuess.points) {
+                btn.classList.add('bg-blue-400', 'text-white', 'opacity-60', 'cursor-not-allowed');
+            } else {
+                btn.classList.add('opacity-50', 'cursor-not-allowed');
+            }
+        } else if (match.played) {
             if (pts === match.actualPoints) {
                 btn.classList.remove('bg-gray-200', 'text-gray-800', 'opacity-50');
                 btn.classList.add('bg-green-500', 'text-white');
