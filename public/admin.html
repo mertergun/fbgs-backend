@@ -60,21 +60,6 @@
             @apply border-b-2 border-indigo-600 text-indigo-400;
         }
     </style>
-    <script>
-        // Tailwind custom config for dark mode
-        tailwind.config = {
-            darkMode: 'class',
-            theme: {
-                extend: {
-                    colors: {
-                        primary: 'var(--bg-primary)',
-                        secondary: 'var(--bg-secondary)',
-                        card: 'var(--bg-card)',
-                    }
-                }
-            }
-        }
-    </script>
 </head>
 <body class="min-h-screen">
     <!-- Passcode Gate -->
@@ -179,6 +164,20 @@
     </div>
 
     <script>
+        // Tailwind config (run after CDN has loaded)
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--bg-primary)',
+                        secondary: 'var(--bg-secondary)',
+                        card: 'var(--bg-card)',
+                    }
+                }
+            }
+        };
+
         // Configuration
         const BASE_URL = window.location.origin;
         let ADMIN_CODE = localStorage.getItem('admin_code') || '';
@@ -231,6 +230,11 @@
             return res.json();
         }
 
+        // Global error logger for unhandled fetch errors
+        window.addEventListener('error', (e) => {
+            console.error('[Admin JS Error]', e.message, 'at', e.filename, ':' + e.lineno);
+        });
+
         // Passcode gate logic
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -243,7 +247,6 @@
                 // Success — persist the passcode
                 localStorage.setItem('admin_code', passcode);
                 showDashboard();
-                tabSections.forEach(s => s.classList.remove('hidden'));
                 initTab('matches');
             } catch (err) {
                 ADMIN_CODE = '';
@@ -264,6 +267,7 @@
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
                 const tabName = tab.dataset.tab;
+                console.log('[Admin] Tab clicked:', tabName);
                 tabSections.forEach(section => {
                     section.classList.toggle('hidden', section.id !== `tab-${tabName}`);
                 });
@@ -348,9 +352,11 @@
 
         // ============ ROOMS ============
         async function initRooms() {
+            console.log('[Admin] initRooms called');
             const container = document.getElementById('rooms-list');
             try {
                 const rooms = await adminFetch('/api/admin/rooms');
+                console.log('[Admin] rooms fetched:', rooms.length);
                 container.innerHTML = rooms.map(r => `
                     <div class="card flex justify-between items-start">
                         <div class="flex-1">
@@ -419,9 +425,11 @@
 
         // ============ PLAYERS ============
         async function initPlayers() {
+            console.log('[Admin] initPlayers called');
             const container = document.getElementById('players-list');
             try {
                 const players = await adminFetch('/api/admin/players');
+                console.log('[Admin] players fetched:', players.length);
                 container.innerHTML = players.map(p => `
                     <div class="card">
                         <div class="flex justify-between items-start mb-2">
