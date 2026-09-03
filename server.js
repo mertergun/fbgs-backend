@@ -4,6 +4,7 @@ const cors = require('cors');
 const http = require('http');
 const WebSocket = require('ws');
 const crypto = require('crypto');
+const path = require('path');
 const { pool, initialize } = require('./db');
 
 const app = express();
@@ -771,6 +772,11 @@ app.delete('/api/admin/guesses/reset', requireAdmin, async (req, res) => {
 // ============================================================
 
 app.use(express.static('public'));
+
+// Secret admin dashboard — not linked from anywhere
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --border: #334155;
+            --danger: #ef4444;
+            --success: #10b981;
+            --indigo: #6366f1;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        .card {
+            background-color: var(--bg-card);
+            border-radius: 0.75rem;
+            padding: 1.25rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            margin-bottom: 1rem;
+            border: 1px solid var(--border);
+        }
+        .gradient-text {
+            background: linear-gradient(90deg, #3b82f6, #ef4444);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .btn {
+            @apply px-4 py-2 rounded-lg font-medium transition-colors;
+        }
+        .btn-primary {
+            @apply bg-indigo-600 text-white hover:bg-indigo-700;
+        }
+        .btn-secondary {
+            @apply bg-gray-700 text-gray-200 hover:bg-gray-600;
+        }
+        .btn-danger {
+            @apply bg-red-600 text-white hover:bg-red-700;
+        }
+        .btn-outline {
+            @apply border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white;
+        }
+        .tab {
+            @apply px-4 py-2 text-sm font-medium rounded-t-lg border-b-2 border-transparent cursor-pointer;
+        }
+        .tab.active {
+            @apply border-b-2 border-indigo-600 text-indigo-400;
+        }
+    </style>
+    <script>
+        // Tailwind custom config for dark mode
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: 'var(--bg-primary)',
+                        secondary: 'var(--bg-secondary)',
+                        card: 'var(--bg-card)',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen">
+    <!-- Passcode Gate -->
+    <div id="gate-screen" class="fixed inset-0 bg-black z-50 flex items-center justify-center">
+        <div class="card max-w-sm w-full px-6">
+            <h2 class="text-2xl font-bold gradient-text mb-4 text-center">Admin Dashboard</h2>
+            <p class="text-gray-400 text-center mb-6">Enter admin passcode to continue</p>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <input type="password" id="passcode" placeholder="Passcode" required
+                           class="w-full px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <button type="submit" class="btn btn-primary w-full">Enter</button>
+                <div id="login-error" class="hidden text-red-400 text-sm text-center">Incorrect passcode</div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboard" class="hidden min-h-screen pb-8">
+        <header class="sticky top-0 bg-primary/95 backdrop-blur-sm border-b border-border px-6 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold gradient-text">Admin Dashboard</h1>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-400" id="server-url"></span>
+                <button id="logout-btn" class="btn btn-secondary btn-sm">Sign out</button>
+            </div>
+        </header>
+
+        <!-- Tabs -->
+        <nav class="px-6 border-b border-border">
+            <div class="flex gap-1 border-b border-border">
+                <button class="tab active" data-tab="matches">Matches</button>
+                <button class="tab" data-tab="rooms">Rooms</button>
+                <button class="tab" data-tab="players">Players</button>
+                <button class="tab" data-tab="danger">Danger Zone</button>
+            </div>
+        </nav>
+
+        <!-- Tab Content -->
+        <main class="px-6 py-4">
+            <!-- Matches Tab -->
+            <section id="tab-matches" class="tab-content">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Match Results</h2>
+                    <button id="refresh-matches" class="btn btn-secondary btn-sm">Refresh</button>
+                </div>
+                <div id="matches-list" class="space-y-3">
+                    <p class="text-gray-400">Loading matches...</p>
+                </div>
+            </section>
+
+            <!-- Rooms Tab -->
+            <section id="tab-rooms" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Rooms</h2>
+                </div>
+                <div class="mb-4">
+                    <form id="create-room-form" class="flex gap-2">
+                        <input type="text" id="room-name" placeholder="Room name" required
+                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none flex-1">
+                        <button type="submit" class="btn btn-primary btn-sm">Create</button>
+                    </form>
+                </div>
+                <div id="rooms-list" class="space-y-3">
+                    <p class="text-gray-400">Loading rooms...</p>
+                </div>
+            </section>
+
+            <!-- Players Tab -->
+            <section id="tab-players" class="tab-content hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Players</h2>
+                </div>
+                <div class="mb-4">
+                    <form id="create-player-form" class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input type="text" id="player-name" placeholder="Player name" required
+                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none">
+                        <input type="date" id="player-edit-until"
+                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary focus:outline-none">
+                        <input type="text" id="player-room-id" placeholder="Room ID (optional)"
+                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none">
+                    </form>
+                    <p class="text-xs text-gray-500 mt-1">Create player with optional edit until date and optional room assignment</p>
+                </div>
+                <div id="players-list" class="space-y-3">
+                    <p class="text-gray-400">Loading players...</p>
+                </div>
+            </section>
+
+            <!-- Danger Zone Tab -->
+            <section id="tab-danger" class="tab-content hidden">
+                <div class="max-w-md">
+                    <h2 class="text-xl font-bold text-red-400 mb-4">Danger Zone</h2>
+                    <div class="card">
+                        <h3 class="font-medium mb-3">Reset All Guesses</h3>
+                        <p class="text-sm text-gray-400 mb-4">This will delete ALL guesses. This action cannot be undone.</p>
+                        <button id="reset-guesses-btn" class="btn btn-danger btn-sm">Reset All Guesses</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        // Configuration
+        const BASE_URL = window.location.origin;
+        let ADMIN_CODE = localStorage.getItem('admin_code') || '';
+
+        // DOM Elements
+        const gateScreen = document.getElementById('gate-screen');
+        const dashboard = document.getElementById('dashboard');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutBtn = document.getElementById('logout-btn');
+        const tabs = document.querySelectorAll('.tab');
+        const tabSections = document.querySelectorAll('.tab-content');
+
+        // Show/hide functions
+        function showGate() {
+            gateScreen.classList.remove('hidden');
+            dashboard.classList.add('hidden');
+        }
+
+        function showDashboard() {
+            gateScreen.classList.add('hidden');
+            dashboard.classList.remove('hidden');
+            document.getElementById('server-url').textContent = `Server: ${BASE_URL}`;
+        }
+
+        function logout() {
+            localStorage.removeItem('admin_code');
+            ADMIN_CODE = '';
+            showGate();
+        }
+
+        // API helper with auth header
+        async function adminFetch(path, options = {}) {
+            const res = await fetch(`${BASE_URL}${path}`, {
+                ...options,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Admin-Code': ADMIN_CODE,
+                    ...(options.headers || {})
+                }
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                if (res.status === 401) {
+                    logout();
+                    throw new Error('Unauthorized - wrong admin code');
+                }
+                throw new Error(data.error || `HTTP ${res.status}`);
+            }
+            return res.json();
+        }
+
+        // Passcode gate logic
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const passcode = document.getElementById('passcode').value;
+
+            // Temporarily set ADMIN_CODE for verification
+            ADMIN_CODE = passcode;
+            try {
+                await adminFetch('/api/admin/players', { method: 'GET' });
+                // Success — persist the passcode
+                localStorage.setItem('admin_code', passcode);
+                showDashboard();
+                tabSections.forEach(s => s.classList.remove('hidden'));
+                initTab('matches');
+            } catch (err) {
+                ADMIN_CODE = '';
+                if (err.message.includes('Unauthorized')) {
+                    loginError.classList.remove('hidden');
+                    document.getElementById('passcode').value = '';
+                } else {
+                    alert('Server error: ' + err.message);
+                }
+            }
+        });
+
+        logoutBtn.addEventListener('click', logout);
+
+        // Tab switching
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                const tabName = tab.dataset.tab;
+                tabSections.forEach(section => {
+                    section.classList.toggle('hidden', section.id !== `tab-${tabName}`);
+                });
+                initTab(tabName);
+            });
+        });
+
+        function initTab(name) {
+            switch (name) {
+                case 'matches': initMatches(); break;
+                case 'rooms': initRooms(); break;
+                case 'players': initPlayers(); break;
+            }
+        }
+
+        // ============ MATCHES ============
+        async function initMatches() {
+            const container = document.getElementById('matches-list');
+            try {
+                const matches = await adminFetch('/api/matches');
+                container.innerHTML = matches.map(m => `
+                    <div class="card" id="match-${m.id}">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold">${m.team} vs ${m.opponent} (${m.homeOrAway || m.home_or_away})</h3>
+                                <p class="text-sm text-gray-400">${m.tournament} • ${m.matchDate || m.match_date}</p>
+                            </div>
+                            ${m.played ? `<span class="px-3 py-1 text-xs font-bold rounded-full ${m.actualPoints === 0 ? 'bg-red-900/50 text-red-300' : m.actualPoints === 1 ? 'bg-green-900/50 text-green-300' : 'bg-green-900/50 text-green-300'}">${m.actualPoints} puan</span>` : ''}
+                        </div>
+                        ${m.played ? '' : createResultForm(m.id, m.resultScore, m.result_points)}
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+            }
+        }
+
+        function createResultForm(matchId, score, points) {
+            return `
+                <form class="flex flex-col gap-2" data-match-form>
+                    <div class="flex gap-2">
+                        <input type="text" name="score" placeholder="Sonuç (örn: 3-1)" required value="${score || ''}"
+                               class="flex-1 px-3 py-2 bg-secondary border border-border rounded-lg text-primary">
+                        <select name="points" class="px-3 py-2 bg-secondary border border-border rounded-lg text-primary">
+                            <option value="">Puan seç</option>
+                            <option value="0" ${points === 0 ? 'selected' : ''}>0</option>
+                            <option value="1" ${points === 1 ? 'selected' : ''}>1</option>
+                            <option value="3" ${points === 3 ? 'selected' : ''}>3</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-sm self-start">Set Result</button>
+                </form>
+            `;
+        }
+
+        // Event delegation for result forms
+        document.addEventListener('submit', async (e) => {
+            const form = e.target.closest('[data-match-form]');
+            if (!form) return;
+            e.preventDefault();
+
+            const card = form.closest('.card');
+            const matchId = card.id.replace('match-', '');
+            const score = form.score.value;
+            const points = parseInt(form.points.value);
+
+            if (!score || isNaN(points)) {
+                alert('Lütfen tüm alanları doldurun');
+                return;
+            }
+
+            try {
+                await adminFetch('/api/admin/results', {
+                    method: 'POST',
+                    body: JSON.stringify({ matchId, result_score: score, result_points: points })
+                });
+                initMatches();
+            } catch (err) {
+                alert('Hata: ' + err.message);
+            }
+        });
+
+        // ============ ROOMS ============
+        async function initRooms() {
+            const container = document.getElementById('rooms-list');
+            try {
+                const rooms = await adminFetch('/api/admin/rooms');
+                container.innerHTML = rooms.map(r => `
+                    <div class="card flex justify-between items-start">
+                        <div class="flex-1">
+                            <h3 class="font-bold">${r.name}</h3>
+                            <p class="text-sm text-gray-400">ID: ${r.id} • Invite: ${r.inviteToken}</p>
+                            <p class="text-xs ${r.isLocked ? 'text-gray-400' : 'text-gray-500'}">Members: ${r.memberCount || 0}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            ${r.isLocked
+                                ? `<button class="btn btn-secondary btn-sm" onclick="unlockRoom(${r.id})">Unlock</button>`
+                                : `<button class="btn btn-primary btn-sm" onclick="lockRoom(${r.id})">Lock</button>`
+                            }
+                            <button class="btn btn-danger btn-sm" onclick="deleteRoom(${r.id})">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+            }
+        }
+
+        async function lockRoom(roomId) {
+            try {
+                await adminFetch(`/api/admin/rooms/${roomId}/lock`, { method: 'POST' });
+                initRooms();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function unlockRoom(roomId) {
+            try {
+                await adminFetch(`/api/admin/rooms/${roomId}/unlock`, { method: 'POST' });
+                initRooms();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function createRoom(e) {
+            e.preventDefault();
+            const name = document.getElementById('room-name').value;
+            try {
+                await adminFetch('/api/admin/rooms', {
+                    method: 'POST',
+                    body: JSON.stringify({ name })
+                });
+                document.getElementById('room-name').value = '';
+                initRooms();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function deleteRoom(roomId) {
+            if (!confirm('Delete this room? This cannot be undone.')) return;
+            try {
+                await adminFetch(`/api/admin/rooms/${roomId}`, { method: 'DELETE' });
+                initRooms();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        document.getElementById('create-room-form').addEventListener('submit', createRoom);
+
+        // ============ PLAYERS ============
+        async function initPlayers() {
+            const container = document.getElementById('players-list');
+            try {
+                const players = await adminFetch('/api/admin/players');
+                container.innerHTML = players.map(p => `
+                    <div class="card">
+                        <div class="flex justify-between items-start mb-2">
+                            <div>
+                                <h3 class="font-bold">${p.name}</h3>
+                                <p class="text-sm text-gray-400">ID: ${p.id} • Token: ${p.inviteToken}</p>
+                                <p class="text-xs ${p.isActive ? 'text-green-400' : 'text-gray-500'}">Status: ${p.isActive ? 'Active' : 'Inactive'}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="btn btn-sm ${p.isActive ? 'btn-secondary' : 'btn-primary'}"
+                                        onclick="togglePlayer(${p.id}, ${p.isActive})">
+                                    ${p.isActive ? 'Deactivate' : 'Activate'}
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deletePlayer(${p.id})">Delete</button>
+                            </div>
+                        </div>
+                        <div class="mt-2 pt-2 border-t border-border">
+                            <label class="text-xs text-gray-400 mr-2">Edit until:</label>
+                            <input type="date" value="${p.editUntil ? p.editUntil.split('T')[0] : ''}"
+                                   data-player-id="${p.id}" data-field="editUntil"
+                                   class="player-edit-input px-2 py-1 bg-secondary border border-border rounded text-primary text-xs">
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+            }
+        }
+
+        async function createPlayer(e) {
+            e.preventDefault();
+            const name = document.getElementById('player-name').value;
+            const editUntil = document.getElementById('player-edit-until').value;
+            const roomId = document.getElementById('player-room-id').value;
+
+            try {
+                await adminFetch('/api/admin/players', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name,
+                        editUntil: editUntil || undefined,
+                        roomId: roomId || undefined
+                    })
+                });
+                document.getElementById('player-name').value = '';
+                document.getElementById('player-edit-until').value = '';
+                document.getElementById('player-room-id').value = '';
+                initPlayers();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        window.togglePlayer = async function(playerId, isActive) {
+            try {
+                await adminFetch(`/api/admin/players/${playerId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ isActive: !isActive })
+                });
+                initPlayers();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        };
+
+        // Event delegation for player edit fields
+        document.addEventListener('change', async (e) => {
+            const input = e.target.closest('.player-edit-input');
+            if (!input) return;
+            const playerId = input.dataset.playerId;
+            const field = input.dataset.field;
+            const value = input.value;
+
+            try {
+                await adminFetch(`/api/admin/players/${playerId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ [field]: value })
+                });
+                initPlayers();
+            } catch (err) {
+                alert('Hata: ' + err.message);
+            }
+        });
+
+        window.deletePlayer = async function(playerId) {
+            if (!confirm('Delete this player? This will also delete their guesses.')) return;
+            try {
+                await adminFetch(`/api/admin/players/${playerId}`, { method: 'DELETE' });
+                initPlayers();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        };
+
+        document.getElementById('create-player-form').addEventListener('submit', createPlayer);
+
+        // ============ DANGER ZONE ============
+        document.getElementById('reset-guesses-btn').addEventListener('click', async () => {
+            const input = prompt('Type YES to confirm: Delete all guesses');
+            if (input !== 'YES') return;
+            try {
+                const result = await adminFetch('/api/admin/guesses/reset', { method: 'DELETE' });
+                alert(`Deleted ${result.deleted} guess(es)`);
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        // ============ INITIALIZATION ============
+        document.getElementById('refresh-matches').addEventListener('click', initMatches);
+    </script>
+</body>
+</html>
