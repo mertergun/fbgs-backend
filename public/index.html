@@ -1396,14 +1396,13 @@ function renderLeaderboard() {
         const meta = TEAM_META[team];
         const teamMatches = allMatches.filter(m => m.team === team);
         const played = teamMatches.filter(m => m.played);
-        const totalMax = teamMatches.length * 3;
-        const maxPoss  = played.length * 3;
-        const earned = allGuesses
-            .filter(g => played.some(m => m.id === g.matchId))
-            .reduce((sum, g) => {
-                const m = played.find(m => m.id === g.matchId);
-                return sum + (g.points === m.actualPoints ? g.points : 0);
-            }, 0);
+        const remaining = teamMatches.filter(m => !m.played);
+        const earned = played.reduce((sum, match) => sum + (Number(match.actualPoints) || 0), 0);
+        const remainingMax = remaining.length * 3;
+        const teamGuesses = allGuesses.filter(g => teamMatches.some(m => m.id === g.matchId));
+        const averageGuess = teamGuesses.length
+            ? (teamGuesses.reduce((sum, guess) => sum + Number(guess.points), 0) / teamGuesses.length).toFixed(1)
+            : '-';
         return `
             <div class="team-card" style="border-left-color:${meta.color}">
                 <div class="flex items-center justify-between mb-1">
@@ -1412,9 +1411,10 @@ function renderLeaderboard() {
                 </div>
                 <div class="flex items-baseline gap-1">
                     <span class="text-xl font-extrabold text-gray-800">${earned}</span>
-                    <span class="text-sm text-gray-400">/${maxPoss}</span>
+                    <span class="text-sm text-gray-400">puan</span>
                 </div>
-                <div class="text-xs text-gray-500">${played.length}/${teamMatches.length} oynandı · Maks ${totalMax} puan</div>
+                <div class="text-xs text-gray-500">Kalan maksimum: +${remainingMax} puan</div>
+                <div class="text-xs text-gray-500">Tahmin ortalaması: ${averageGuess}</div>
             </div>
         `;
     }).join('');
