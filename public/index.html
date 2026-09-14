@@ -1420,16 +1420,28 @@ function renderLeaderboard() {
     }).join('');
 
     // ----- Player leaderboard -----
-    if (allGuesses.length === 0) {
+    if (allLeaderboard.length === 0 && allGuesses.length === 0) {
         listContainer.innerHTML = '<div class="p-4 bg-white rounded-lg text-center text-gray-500 italic">Henüz tahmin yapılmamış. İlk tahminini sen yap!</div>';
         return;
     }
 
     const playerMap = {};
+    allLeaderboard.forEach(player => {
+        playerMap[player.name] = {
+            name: player.name,
+            leaderboardTotal: player.totalPoints,
+            guesses: [],
+            earned:    { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+            projected: { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+            totalMax:  { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
+            icons:     { 'Galatasaray': [], 'Fenerbahçe': [], 'Beşiktaş': [], 'Trabzonspor': [] }
+        };
+    });
     allGuesses.forEach(g => {
         if (!playerMap[g.playerName]) {
             playerMap[g.playerName] = {
                 name: g.playerName,
+                leaderboardTotal: 0,
                 guesses: [],
                 // Points actually earned (only from played matches, only if correct)
                 earned:    { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
@@ -1462,20 +1474,13 @@ function renderLeaderboard() {
         }
     });
 
-    const players = Object.values(playerMap).sort((a, b) => {
-        const aEarned = Object.values(a.earned).reduce((s, v) => s + v, 0);
-        const bEarned = Object.values(b.earned).reduce((s, v) => s + v, 0);
-        if (bEarned !== aEarned) return bEarned - aEarned;
-        // Tiebreaker: total guessed points (projeksiyon)
-        const aProjected = Object.values(a.projected).reduce((s, v) => s + v, 0);
-        const bProjected = Object.values(b.projected).reduce((s, v) => s + v, 0);
-        if (bProjected !== aProjected) return bProjected - aProjected;
-        return a.name.localeCompare(b.name);
-    });
+    const players = Object.values(playerMap).sort((a, b) =>
+        b.leaderboardTotal - a.leaderboardTotal || a.name.localeCompare(b.name, 'tr')
+    );
 
     listContainer.innerHTML = '';
     players.forEach((p, i) => {
-        const earnedTotal = Object.values(p.earned).reduce((s, v) => s + v, 0);
+        const earnedTotal = p.leaderboardTotal;
 
         let trophy = '';
         if (i === 0) trophy = '<span class="ml-2 text-yellow-500">🏆</span>';
