@@ -1399,9 +1399,15 @@ function renderLeaderboard() {
         const remaining = teamMatches.filter(m => !m.played);
         const earned = played.reduce((sum, match) => sum + (Number(match.actualPoints) || 0), 0);
         const remainingMax = remaining.length * 3;
+        const maximumPossible = earned + remainingMax;
         const teamGuesses = allGuesses.filter(g => teamMatches.some(m => m.id === g.matchId));
-        const averageGuess = teamGuesses.length
-            ? (teamGuesses.reduce((sum, guess) => sum + Number(guess.points), 0) / teamGuesses.length).toFixed(1)
+        const userGuessTotals = Object.values(teamGuesses.reduce((totals, guess) => {
+            const userKey = guess.playerId || guess.playerName;
+            totals[userKey] = (totals[userKey] || 0) + Number(guess.points);
+            return totals;
+        }, {}));
+        const averageGuess = userGuessTotals.length
+            ? (userGuessTotals.reduce((sum, total) => sum + total, 0) / userGuessTotals.length).toFixed(1)
             : '-';
         return `
             <div class="team-card" style="border-left-color:${meta.color}">
@@ -1413,8 +1419,8 @@ function renderLeaderboard() {
                     <span class="text-xl font-extrabold text-gray-800">${earned}</span>
                     <span class="text-sm text-gray-400">puan</span>
                 </div>
-                <div class="text-xs text-gray-500">Kalan maksimum: +${remainingMax} puan</div>
-                <div class="text-xs text-gray-500">Tahmin ortalaması: ${averageGuess}</div>
+                <div class="text-xs text-gray-500">Alınabilecek maksimum: ${maximumPossible} puan</div>
+                <div class="text-xs text-gray-500">Kullanıcı toplam tahmin ortalaması: ${averageGuess}</div>
             </div>
         `;
     }).join('');
