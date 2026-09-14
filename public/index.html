@@ -1429,6 +1429,8 @@ function renderLeaderboard() {
     allLeaderboard.forEach(player => {
         playerMap[player.name] = {
             name: player.name,
+            correctCount: player.correctCount || 0,
+            visibleCorrectCount: 0,
             leaderboardTotal: player.totalPoints,
             guesses: [],
             earned:    { 'Galatasaray': 0, 'Fenerbahçe': 0, 'Beşiktaş': 0, 'Trabzonspor': 0 },
@@ -1441,6 +1443,8 @@ function renderLeaderboard() {
         if (!playerMap[g.playerName]) {
             playerMap[g.playerName] = {
                 name: g.playerName,
+                correctCount: 0,
+                visibleCorrectCount: 0,
                 leaderboardTotal: 0,
                 guesses: [],
                 // Points actually earned (only from played matches, only if correct)
@@ -1465,6 +1469,7 @@ function renderLeaderboard() {
         if (match.played) {
             if (g.points === match.actualPoints) {
                 p.earned[team] += g.points;
+                p.visibleCorrectCount++;
                 p.icons[team].push('correct');
             } else {
                 p.icons[team].push('incorrect');
@@ -1474,8 +1479,14 @@ function renderLeaderboard() {
         }
     });
 
+    Object.values(playerMap).forEach(player => {
+        player.correctCount = Math.max(player.correctCount, player.visibleCorrectCount);
+    });
+
     const players = Object.values(playerMap).sort((a, b) =>
-        b.leaderboardTotal - a.leaderboardTotal || a.name.localeCompare(b.name, 'tr')
+        b.correctCount - a.correctCount ||
+        b.leaderboardTotal - a.leaderboardTotal ||
+        a.name.localeCompare(b.name, 'tr')
     );
 
     listContainer.innerHTML = '';
@@ -1515,8 +1526,8 @@ function renderLeaderboard() {
                 </div>
                 <div class="flex items-center space-x-2 text-sm shrink-0 lb-earned-wrap">
                     <div class="text-right">
-                        <div class="text-xs text-gray-500 lb-earned-label">Doğru tahmin sayısı</div>
-                        <div class="text-2xl font-extrabold text-green-600">${earnedTotal}</div>
+                        <div class="text-xs text-gray-500 lb-earned-label">Doğru tahmin</div>
+                        <div class="text-2xl font-extrabold text-green-600">${p.correctCount}</div>
                     </div>
                 </div>
             </div>

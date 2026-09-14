@@ -434,19 +434,23 @@ async function getLeaderboard(roomId) {
           WHEN g.points = m.result_points AND m.played = true THEN g.points
           ELSE 0
         END
-      ), 0) as total_points
+      ), 0) as total_points,
+      COUNT(*) FILTER (
+        WHERE g.points = m.result_points AND m.played = true
+      ) as correct_count
     FROM room_players rp
     JOIN players p ON p.id = rp.player_id
     LEFT JOIN guesses g ON p.id = g.player_id
     LEFT JOIN matches m ON g.match_id = m.id
     WHERE rp.room_id = $1 AND p.is_active = 1
     GROUP BY p.id, p.name
-    ORDER BY total_points DESC
+    ORDER BY correct_count DESC, total_points DESC, p.name ASC
   `;
   const result = await pool.query(sql, [roomId]);
   return result.rows.map((r, i) => ({
     rank: i + 1,
     name: r.name,
+    correctCount: parseInt(r.correct_count) || 0,
     totalPoints: parseInt(r.total_points) || 0
   }));
 }
