@@ -1426,6 +1426,14 @@ function renderLeaderboard() {
     }
 
     const playerMap = {};
+    const teamEarnedPoints = Object.fromEntries(
+        SCOREBOARD_TEAMS.map(team => [
+            team,
+            allMatches
+                .filter(match => match.team === team && match.played)
+                .reduce((sum, match) => sum + (Number(match.actualPoints) || 0), 0)
+        ])
+    );
     allLeaderboard.forEach(player => {
         playerMap[player.name] = {
             name: player.name,
@@ -1508,7 +1516,7 @@ function renderLeaderboard() {
             }).join('');
             return '<div class="team-result-item">' +
                 '<span class="font-bold ' + meta.textClass + ' w-7 shrink-0">' + meta.short + ':</span>' +
-                '<span class="font-bold text-green-600">' + p.earned[team] + '</span>' +
+                '<span class="font-bold text-green-600">' + teamEarnedPoints[team] + '</span>' +
                 '<span class="text-gray-400">/</span>' +
                 '<span class="font-bold text-indigo-500">' + p.projected[team] + '</span>' +
                 '<div class="dot-legend">' + iconDots + '</div>' +
