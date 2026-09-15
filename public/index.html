@@ -773,6 +773,24 @@ let currentTranslate = 0;
 let isInitialized = false;
 let currentMatchListFilter = 'all';
 
+const CHECK_ICON_HTML = '<svg class="check-icon mr-1" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+function updateGuessButtonLabel(btn, isSelected) {
+    const points = parseInt(btn.dataset.points);
+    const label = points + ' Puan';
+    if (!btn.classList.contains('guess-btn')) {
+        btn.innerHTML = label;
+        return;
+    }
+    if (!isSelected) {
+        btn.innerHTML = label;
+        return;
+    }
+    // For selected guess: use currentColor which inherits from the button's text color
+    // This works because selected buttons always have text-white class
+    btn.innerHTML = CHECK_ICON_HTML + '<span class="ml-1">' + label + '</span>';
+}
+
 // ============================================================
 // INIT
 // ============================================================
@@ -1226,8 +1244,13 @@ function submitGuess(matchId, points, buttonEl) {
             setTimeout(() => card.classList.remove('card-flash'), 600);
         }
 
-        // Show checkmark for 600ms
-        buttonEl.innerHTML = '<svg class="check-icon check-icon-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+        // Show checkmark with user's guess immediately for better UX
+        // Get the user's guess points from the submission
+        const guessPoints = points;
+        const hasPoints = guessPoints !== null && guessPoints !== undefined;
+        buttonEl.innerHTML = (hasPoints
+            ? CHECK_ICON_HTML + '<span class="ml-1">' + guessPoints + ' Puan</span>'
+            : '<svg class="check-icon check-icon-pop" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>');
         buttonEl.classList.add('btn-flash-success');
         buttonEl.classList.remove('bg-gray-200', 'text-gray-800');
         buttonEl.classList.add('bg-green-500', 'text-white');
@@ -1239,10 +1262,10 @@ function submitGuess(matchId, points, buttonEl) {
                     b.disabled = false;
                     b.style.pointerEvents = '';
                 });
+                // Re-sync all buttons so the selected guess shows a persistent checkmark
+                updateGuessButtonState(card, matchId);
             }
-            // Update button label back
-            updateGuessButtonState(card, matchId);
-        }, 700);
+        }, 600);
 
         showMessage('Tahmin kaydedildi!', 'success');
 
@@ -1273,8 +1296,10 @@ function submitGuess(matchId, points, buttonEl) {
                 b.disabled = false;
                 b.style.pointerEvents = '';
             });
+            updateGuessButtonState(card, matchId);
+        } else {
+            buttonEl.innerHTML = points + ' Puan';
         }
-        buttonEl.innerHTML = points + ' Puan';
         showMessage('Sunucu hatası - tahmin kaydedilemedi', 'error');
     });
 }
@@ -1322,6 +1347,7 @@ function updateGuessButtonState(card, matchId) {
     card.querySelectorAll('.guess-btn, .guess-btn-mini').forEach(btn => {
         const pts = parseInt(btn.dataset.points);
         const roomLocked = currentRoom && currentRoom.isLocked;
+        const isSelected = Boolean(myGuess && pts === myGuess.points);
 
         // Reset classes
         btn.classList.remove(
@@ -1336,7 +1362,7 @@ function updateGuessButtonState(card, matchId) {
             // Locked — show selected guess but disable further changes
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
-            if (myGuess && pts === myGuess.points) {
+            if (isSelected) {
                 btn.classList.add('bg-blue-400', 'text-white', 'opacity-60', 'cursor-not-allowed');
             } else {
                 btn.classList.add('bg-gray-200', 'text-gray-800', 'opacity-50', 'cursor-not-allowed');
@@ -1347,19 +1373,20 @@ function updateGuessButtonState(card, matchId) {
                     btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
                     btn.classList.add('bg-green-500', 'text-white');
                 }
-                if (myGuess && pts === myGuess.points && pts !== match.actualPoints) {
+                if (isSelected && pts !== match.actualPoints) {
                     btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
                     btn.classList.add('bg-red-500', 'text-white');
                 }
             }
         } else {
-            if (myGuess && pts === myGuess.points) {
+            if (isSelected) {
                 btn.classList.remove('bg-gray-200', 'text-gray-800');
                 btn.classList.add('bg-blue-400', 'text-white');
             } else {
                 btn.classList.add('bg-gray-200', 'text-gray-800');
             }
         }
+        updateGuessButtonLabel(btn, isSelected);
     });
 
     // Update result info
@@ -1799,33 +1826,35 @@ function highlightSelectedGuess() {
     const roomLocked = currentRoom && currentRoom.isLocked;
     card.querySelectorAll('.guess-btn').forEach(btn => {
         const pts = parseInt(btn.dataset.points);
+        const isSelected = Boolean(myGuess && pts === myGuess.points);
+
         btn.disabled = false;
         btn.style.pointerEvents = '';
         btn.classList.remove('bg-blue-400', 'bg-green-500', 'bg-red-500', 'opacity-50', 'cursor-not-allowed');
         btn.classList.add('bg-gray-200', 'text-gray-800');
-        if (roomLocked) {
+        if (roomLocked || match.played) {
             btn.disabled = true;
             btn.style.pointerEvents = 'none';
-            if (myGuess && pts === myGuess.points) {
+            if (isSelected) {
                 btn.classList.add('bg-blue-400', 'text-white', 'opacity-60', 'cursor-not-allowed');
             } else {
                 btn.classList.add('opacity-50', 'cursor-not-allowed');
             }
-        } else if (match.played) {
-            if (pts === match.actualPoints) {
-                btn.classList.remove('bg-gray-200', 'text-gray-800', 'opacity-50');
-                btn.classList.add('bg-green-500', 'text-white');
+            if (match.played) {
+                if (pts === match.actualPoints) {
+                    btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                    btn.classList.add('bg-green-500', 'text-white');
+                }
+                if (isSelected && pts !== match.actualPoints) {
+                    btn.classList.remove('opacity-50', 'bg-gray-200', 'text-gray-800');
+                    btn.classList.add('bg-red-500', 'text-white');
+                }
             }
-            if (myGuess && pts === myGuess.points && pts !== match.actualPoints) {
-                btn.classList.remove('bg-gray-200', 'text-gray-800', 'opacity-50');
-                btn.classList.add('bg-red-500', 'text-white');
-            }
-        } else {
-            if (myGuess && pts === myGuess.points) {
-                btn.classList.remove('bg-gray-200', 'text-gray-800');
-                btn.classList.add('bg-blue-400', 'text-white');
-            }
+        } else if (isSelected) {
+            btn.classList.remove('bg-gray-200', 'text-gray-800');
+            btn.classList.add('bg-blue-400', 'text-white');
         }
+        updateGuessButtonLabel(btn, isSelected);
     });
 }
 
