@@ -487,7 +487,7 @@ app.get('/api/weekly-competition', async (req, res) => {
        LEFT JOIN guesses g ON g.player_id = p.id AND g.match_id = m.id
        WHERE rp.room_id = $1 AND p.is_active = 1
        GROUP BY p.id, p.name
-       ORDER BY points DESC, correct_count DESC, p.name ASC`,
+       ORDER BY correct_count DESC, points DESC, p.name ASC`,
       [roomId, weekStart, end]
     );
     res.json({ weekStart, weekEndExclusive: end, complete: true, remaining: 0,
