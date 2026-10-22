@@ -675,6 +675,7 @@
                 <div class="loading-spinner loading-big"></div>
             </div>
             <div id="leaderboardList" class="space-y-3"></div>
+            <section id="weeklyCompetition" class="card mt-6" aria-label="Haftalık yarışma"><h3 class="font-bold text-lg mb-3">Haftalık Yarışma</h3><div id="weeklyCompetitionContent">Yükleniyor…</div></section>
         </div>
 
         <!-- Games Carousel View -->
@@ -1125,6 +1126,7 @@ function loadAllData(silent = false) {
             updateRoomBadge();
         }
         renderLeaderboard();
+        renderWeeklyCompetition();
         populateMatchList(currentMatchListFilter);
         // Rebuild the whole carousel only if needed — preserve position
         if (allMatches[currentMatchIndex]) {
@@ -1876,6 +1878,57 @@ function highlightSelectedGuess() {
 // ============================================================
 // VIEWS
 // ============================================================
+
+function weekMonday(dateString) {
+    const d = new Date(dateString + 'T12:00:00Z');
+    if (Number.isNaN(d.getTime())) return null;
+    d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
+    return d.toISOString().slice(0, 10);
+}
+let weeklyRequestVersion = 0;
+async function renderWeeklyCompetition() {
+    const box = document.getElementById('weeklyCompetitionContent');
+    if (!box || !currentRoom || !Array.isArray(allMatches)) return;
+    const weeks = [...new Set(allMatches.map(m => weekMonday(m.matchDate)).filter(Boolean))].sort().reverse();
+    const current = weeks.find(w => w <= new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Amsterdam'})) || weeks[0];
+    if (!current) { box.textContent = 'Henüz maç haftası yok.'; return; }
+    const version = ++weeklyRequestVersion;
+    box.innerHTML = '<label for="weeklyWeekSelect">Maç haftası</label> <select id="weeklyWeekSelect" class="p-2 rounded border mb-3"></select><div id="weeklyWeekResults"></div>';
+    const select = box.querySelector('select');
+    weeks.forEach((week, i) => {
+        const end = new Date(week + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 6);
+        const opt = document.createElement('option'); opt.value = week;
+        opt.textContent = 'Hafta ' + (weeks.length - i) + ' · ' + week + ' – ' + end.toISOString().slice(0,10);
+        select.appendChild(opt);
+    });
+    select.value = current;
+    async function loadWeek() {
+        const week = select.value;
+        const resultBox = box.querySelector('#weeklyWeekResults');
+        resultBox.textContent = 'Yükleniyor…';
+        try {
+            const response = await fetch(API_BASE + '/api/weekly-competition?roomId=' + encodeURIComponent(currentRoom.id) + '&weekStart=' + encodeURIComponent(week));
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const data = await response.json();
+            if (version !== weeklyRequestVersion || select.value !== week) return;
+            if (!data.complete) {
+                resultBox.textContent = data.remaining ? 'Sonuçlar bekleniyor: ' + data.remaining + ' maçın sonucu henüz girilmedi.' : 'Bu hafta için maç yok.';
+                return;
+            }
+            resultBox.replaceChildren();
+            data.standings.forEach(player => {
+                const line = document.createElement('div');
+                line.className = 'flex justify-between gap-3 py-2 border-b';
+                const name = document.createElement('span'); name.textContent = player.rank + '. ' + player.name;
+                const points = document.createElement('strong'); points.textContent = player.points + ' puan';
+                line.append(name, points); resultBox.appendChild(line);
+            });
+        } catch (error) { resultBox.textContent = 'Haftalık sonuçlar yüklenemedi.'; }
+    }
+    select.addEventListener('change', loadWeek);
+    await loadWeek();
+}
+
 function showView(view) {
     document.getElementById('tokenInputView').classList.add('hidden');
     document.getElementById('scoreboardView').classList.add('hidden');
