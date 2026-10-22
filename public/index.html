@@ -1101,7 +1101,7 @@ function connectWebSocket() {
 function loadAllData(silent = false) {
     if (!silent) showLoading(true);
     const token = localStorage.getItem(STORAGE_KEY_TOKEN) || '';
-    const playerToken = token.startsWith('inv_') ? token : '';
+    const playerToken = token;
     const leaderboardUrl = currentRoom
         ? API_BASE + '/api/leaderboard?roomId=' + currentRoom.id
         : API_BASE + '/api/leaderboard';
@@ -1116,8 +1116,8 @@ function loadAllData(silent = false) {
         allGuesses = guesses;
         allLeaderboard = leaderboard;
         // Update room lock state if returned
-        if (inviteData && inviteData.rooms && inviteData.rooms[0]) {
-            const updatedRoom = inviteData.rooms[0];
+        if (inviteData && (inviteData.room || (inviteData.rooms && inviteData.rooms[0]))) {
+            const updatedRoom = inviteData.room || inviteData.rooms[0];
             currentRoom = {
                 id: updatedRoom.id,
                 name: updatedRoom.name,
