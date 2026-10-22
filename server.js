@@ -461,7 +461,7 @@ app.get('/api/weekly-competition', async (req, res) => {
   try {
     const roomId = Number(req.query.roomId);
     const weekStart = String(req.query.weekStart || '');
-    if (!Number.isSafeInteger(roomId) || roomId <= 0 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(weekStart)) {
+    if (!Number.isSafeInteger(roomId) || roomId <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
       return res.status(400).json({ error: 'Valid roomId and Monday weekStart (YYYY-MM-DD) required' });
     }
     const monday = new Date(weekStart + 'T00:00:00Z');
@@ -483,8 +483,8 @@ app.get('/api/weekly-competition', async (req, res) => {
               COUNT(*) FILTER (WHERE m.played AND g.points = m.result_points) AS correct_count
        FROM room_players rp
        JOIN players p ON p.id = rp.player_id
-       LEFT JOIN guesses g ON g.player_id = p.id
-       LEFT JOIN matches m ON m.id = g.match_id AND m.match_date >= $2 AND m.match_date < $3
+       LEFT JOIN matches m ON m.match_date >= $2 AND m.match_date < $3
+       LEFT JOIN guesses g ON g.player_id = p.id AND g.match_id = m.id
        WHERE rp.room_id = $1 AND p.is_active = 1
        GROUP BY p.id, p.name
        ORDER BY points DESC, correct_count DESC, p.name ASC`,
