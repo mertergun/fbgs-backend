@@ -335,24 +335,49 @@
         }
 
         // ============ MATCHES ============
+        const matchGroups = { ready: true, completed: false, upcoming: false };
+        const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+        function matchTimestamp(m) {
+            const raw = m.matchDate || m.match_date;
+            const time = Date.parse(raw);
+            return Number.isFinite(time) ? time : Infinity;
+        }
         async function initMatches() {
             const container = document.getElementById('matches-list');
             try {
                 const matches = await adminFetch('/api/matches');
-                container.innerHTML = matches.map(m => `
-                    <div class="card" id="match-${m.id}">
-                        <div class="flex justify-between items-start mb-3">
-                            <div>
-                                <h3 class="font-bold">${m.team} vs ${m.opponent} (${m.homeOrAway || m.home_or_away})</h3>
-                                <p class="text-sm text-gray-400">${m.tournament} • ${m.matchDate || m.match_date}</p>
-                            </div>
-                            ${m.played ? `<span class="px-3 py-1 text-xs font-bold rounded-full ${m.actualPoints === 0 ? 'bg-red-900/50 text-red-300' : m.actualPoints === 1 ? 'bg-green-900/50 text-green-300' : 'bg-green-900/50 text-green-300'}">${m.actualPoints} puan</span>` : ''}
+                const now = Date.now();
+                const groups = { ready: [], completed: [], upcoming: [] };
+                matches.forEach(m => {
+                    const group = m.played ? 'completed' : matchTimestamp(m) <= now ? 'ready' : 'upcoming';
+                    groups[group].push(m);
+                });
+                Object.values(groups).forEach(group => group.sort((a,b) => matchTimestamp(a)-matchTimestamp(b) || String(a.id).localeCompare(String(b.id), undefined, {numeric:true})));
+                const titles = { ready: 'Ready for results', completed: 'Completed matches', upcoming: 'Upcoming matches' };
+                container.innerHTML = Object.entries(groups).map(([key, items]) => `
+                    <details class="card" data-match-group="${key}" ${matchGroups[key] ? 'open' : ''}>
+                        <summary class="cursor-pointer font-semibold text-lg select-none">${titles[key]} <span class="text-sm text-gray-400">(${items.length})</span></summary>
+                        <div class="space-y-3 mt-4">
+                            ${items.length ? items.map(m => `
+                                <div class="rounded-lg border border-slate-700 p-4" id="match-${escapeHtml(m.id)}">
+                                    <div class="flex flex-wrap justify-between gap-3 mb-3">
+                                        <div>
+                                            <h3 class="font-bold">${escapeHtml(m.team)} vs ${escapeHtml(m.opponent)} (${escapeHtml(m.homeOrAway || m.home_or_away)})</h3>
+                                            <p class="text-sm text-gray-400">${escapeHtml(m.tournament)} • ${escapeHtml(m.matchDate || m.match_date)}</p>
+                                        </div>
+                                        ${m.played ? `<span class="text-sm text-green-300">${escapeHtml(m.actualPoints)} points</span>` : ''}
+                                    </div>
+                                    ${key === 'upcoming' ? '' : createResultForm(m.id, m.resultScore || m.result_score, m.actualPoints ?? m.result_points)}
+                                </div>
+                            `).join('') : '<p class="text-sm text-gray-400">No matches in this group.</p>'}
                         </div>
-                        ${m.played ? '' : createResultForm(m.id, m.resultScore, m.result_points)}
-                    </div>
+                    </details>
                 `).join('');
+                container.querySelectorAll('[data-match-group]').forEach(el => el.addEventListener('toggle', () => {
+                    matchGroups[el.dataset.matchGroup] = el.open;
+                }));
             } catch (err) {
-                container.innerHTML = `<p class="text-red-400">Error: ${err.message}</p>`;
+                container.textContent = 'Error: ' + err.message;
             }
         }
 
@@ -360,7 +385,7 @@
             return `
                 <form class="flex flex-col gap-2" data-match-form>
                     <div class="flex gap-2">
-                        <input type="text" name="score" placeholder="Sonuç (örn: 3-1)" required value="${score || ''}"
+                        <input type="text" name="score" placeholder="Sonuç (örn: 3-1)" required value="${escapeHtml(score || '')}"
                                class="flex-1 px-3 py-2 bg-secondary border border-border rounded-lg text-primary">
                         <select name="points" class="px-3 py-2 bg-secondary border border-border rounded-lg text-primary">
                             <option value="">Puan seç</option>
@@ -395,9 +420,11 @@
                     method: 'POST',
                     body: JSON.stringify({ matchId, result_score: score, result_points: points })
                 });
-                initMatches();
+                matchGroups.completed = false;
+                await initMatches();
+                notify('Result saved. Match moved to Completed matches.');
             } catch (err) {
-                alert('Hata: ' + err.message);
+                notify('Could not save result: ' + err.message, true);
             }
         });
 
