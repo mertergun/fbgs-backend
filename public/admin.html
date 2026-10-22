@@ -7,7 +7,7 @@
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         :root {
             --bg-primary: #0f172a;
             --bg-secondary: #1e293b;
@@ -19,6 +19,29 @@
             --success: #10b981;
             --indigo: #6366f1;
         }
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        button, input, select { font: inherit; }
+        button { cursor: pointer; }
+        button:disabled { opacity: .55; cursor: wait; }
+        :focus-visible { outline: 2px solid #818cf8; outline-offset: 3px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; padding: .65rem 1rem; border-radius: .7rem; font-weight: 600; transition: background .15s, transform .15s, box-shadow .15s; }
+        .btn:hover:not(:disabled) { transform: translateY(-1px); }
+        .btn-primary { background: #4f46e5; color: white; box-shadow: 0 4px 16px #4f46e533; }
+        .btn-primary:hover { background: #6366f1; }
+        .btn-secondary { background: #334155; color: #f1f5f9; }
+        .btn-secondary:hover { background: #475569; }
+        .btn-danger { background: #991b1b; color: white; }
+        .btn-danger:hover { background: #b91c1c; }
+        .tab { padding: .85rem 1.1rem; border-bottom: 2px solid transparent; color: #94a3b8; font-weight: 600; white-space: nowrap; }
+        .tab:hover { color: #e2e8f0; }
+        .tab.active { color: #a5b4fc; border-bottom-color: #818cf8; }
+        .field { width: 100%; min-width: 0; padding: .75rem .9rem; border: 1px solid #475569; border-radius: .7rem; background: #0f172a; color: #f8fafc; }
+        .field::placeholder { color: #94a3b8; }
+        .field:focus { outline: 2px solid #818cf8; outline-offset: 1px; }
+        .field-label { display: block; margin-bottom: .45rem; font-size: .8rem; font-weight: 600; color: #cbd5e1; }
+        #toast { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 60; max-width: min(420px, calc(100vw - 2.5rem)); padding: .85rem 1.2rem; border-radius: .8rem; background: #1e293b; border: 1px solid #475569; color: #f8fafc; box-shadow: 0 12px 35px #0006; }
+        #toast.error { border-color: #f87171; }
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-primary);
@@ -80,7 +103,7 @@
 
     <!-- Main Dashboard -->
     <div id="dashboard" class="hidden min-h-screen pb-8">
-        <header class="sticky top-0 bg-primary/95 backdrop-blur-sm border-b border-border px-6 py-4 flex justify-between items-center">
+        <header class="sticky top-0 z-20 bg-primary/95 backdrop-blur-sm border-b border-border px-4 sm:px-8 py-4 flex flex-wrap gap-3 justify-between items-center">
             <h1 class="text-2xl font-bold gradient-text">Admin Dashboard</h1>
             <div class="flex items-center gap-4">
                 <span class="text-sm text-gray-400" id="server-url"></span>
@@ -89,7 +112,7 @@
         </header>
 
         <!-- Tabs -->
-        <nav class="px-6 border-b border-border">
+        <nav class="px-4 sm:px-8 border-b border-border overflow-x-auto">
             <div class="flex gap-1 border-b border-border">
                 <button class="tab active" data-tab="matches">Matches</button>
                 <button class="tab" data-tab="rooms">Rooms</button>
@@ -99,7 +122,7 @@
         </nav>
 
         <!-- Tab Content -->
-        <main class="px-6 py-4">
+        <main class="max-w-6xl mx-auto px-4 sm:px-8 py-8">
             <!-- Matches Tab -->
             <section id="tab-matches" class="tab-content">
                 <div class="flex justify-between items-center mb-4">
@@ -133,16 +156,33 @@
                 <div class="flex justify-between items-center mb-4">
                     <h2 class="text-xl font-bold">Players</h2>
                 </div>
-                <div class="mb-4">
-                    <form id="create-player-form" class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                        <input type="text" id="player-name" placeholder="Player name" required
-                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none">
-                        <input type="date" id="player-edit-until"
-                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary focus:outline-none">
-                        <input type="text" id="player-room-id" placeholder="Room ID (optional)"
-                               class="px-4 py-2 bg-secondary border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none">
+                <div class="card mb-6">
+                    <div class="mb-5">
+                        <h3 class="text-lg font-bold">Add a player</h3>
+                        <p class="text-sm text-gray-400 mt-1">Create a player and optionally set their editing deadline and room.</p>
+                    </div>
+                    <form id="create-player-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="field-label" for="player-name">Player name <span class="text-red-400">*</span></label>
+                            <input class="field" type="text" id="player-name" placeholder="Enter player name" maxlength="100" autocomplete="off" required>
+                        </div>
+                        <div>
+                            <label class="field-label" for="player-edit-until">Edit until (optional)</label>
+                            <input class="field" type="date" id="player-edit-until">
+                        </div>
+                        <div class="md:col-span-2">
+                            <label class="field-label" for="player-room-id">Room ID (optional)</label>
+                            <input class="field" type="text" id="player-room-id" placeholder="Leave empty for no room" inputmode="numeric">
+                        </div>
+                        <div class="md:col-span-2 flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border">
+                            <p class="text-xs text-gray-400">Only the player name is required.</p>
+                            <button id="create-player-btn" type="submit" class="btn btn-primary">+ Create player</button>
+                        </div>
                     </form>
-                    <p class="text-xs text-gray-500 mt-1">Create player with optional edit until date and optional room assignment</p>
+                </div>
+                <div class="flex items-center justify-between gap-3 mb-4">
+                    <h3 class="text-lg font-semibold">Existing players</h3>
+                    <button type="button" class="btn btn-secondary text-sm" id="refresh-players">Refresh</button>
                 </div>
                 <div id="players-list" class="space-y-3">
                     <p class="text-gray-400">Loading players...</p>
@@ -163,6 +203,7 @@
         </main>
     </div>
 
+    <div id="toast" role="status" aria-live="polite" class="hidden"></div>
     <script>
         // Tailwind config (run after CDN has loaded)
         tailwind.config = {
@@ -281,6 +322,16 @@
                 case 'rooms': initRooms(); break;
                 case 'players': initPlayers(); break;
             }
+        }
+
+        let toastTimeout;
+        function notify(message, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.toggle('error', isError);
+            toast.classList.remove('hidden');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toast.classList.add('hidden'), 4000);
         }
 
         // ============ MATCHES ============
@@ -461,25 +512,27 @@
 
         async function createPlayer(e) {
             e.preventDefault();
-            const name = document.getElementById('player-name').value;
+            const form = e.currentTarget;
+            const button = document.getElementById('create-player-btn');
+            const name = document.getElementById('player-name').value.trim();
             const editUntil = document.getElementById('player-edit-until').value;
-            const roomId = document.getElementById('player-room-id').value;
-
+            const roomId = document.getElementById('player-room-id').value.trim();
+            if (!name) { notify('Enter a player name.', true); return; }
+            button.disabled = true;
+            button.textContent = 'Creating…';
             try {
                 await adminFetch('/api/admin/players', {
                     method: 'POST',
-                    body: JSON.stringify({
-                        name,
-                        editUntil: editUntil || undefined,
-                        roomId: roomId || undefined
-                    })
+                    body: JSON.stringify({ name, editUntil: editUntil || undefined, roomId: roomId || undefined })
                 });
-                document.getElementById('player-name').value = '';
-                document.getElementById('player-edit-until').value = '';
-                document.getElementById('player-room-id').value = '';
-                initPlayers();
+                form.reset();
+                notify('Player created successfully.');
+                await initPlayers();
             } catch (err) {
-                alert('Error: ' + err.message);
+                notify('Could not create player: ' + err.message, true);
+            } finally {
+                button.disabled = false;
+                button.textContent = '+ Create player';
             }
         }
 
@@ -525,6 +578,7 @@
         };
 
         document.getElementById('create-player-form').addEventListener('submit', createPlayer);
+        document.getElementById('refresh-players').addEventListener('click', initPlayers);
 
         // ============ DANGER ZONE ============
         document.getElementById('reset-guesses-btn').addEventListener('click', async () => {
