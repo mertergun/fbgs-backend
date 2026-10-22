@@ -455,6 +455,49 @@ async function getLeaderboard(roomId) {
   }));
 }
 
+// Weekly competition: Monday–Sunday in Europe/Amsterdam, published only once
+// every scheduled match in that week has a recorded result.
+app.get('/api/weekly-competition', async (req, res) => {
+  try {
+    const roomId = Number(req.query.roomId);
+    const weekStart = String(req.query.weekStart || '');
+    if (!Number.isSafeInteger(roomId) || roomId <= 0 || !/^\\d{4}-\\d{2}-\\d{2}$/.test(weekStart)) {
+      return res.status(400).json({ error: 'Valid roomId and Monday weekStart (YYYY-MM-DD) required' });
+    }
+    const monday = new Date(weekStart + 'T00:00:00Z');
+    if (Number.isNaN(monday.getTime()) || monday.toISOString().slice(0, 10) !== weekStart || monday.getUTCDay() !== 1) {
+      return res.status(400).json({ error: 'weekStart must be a valid Monday' });
+    }
+    const end = new Date(monday.getTime() + 7 * 86400000).toISOString().slice(0, 10);
+    const matches = await pool.query(
+      'SELECT id, played FROM matches WHERE match_date >= $1 AND match_date < $2',
+      [weekStart, end]
+    );
+    const pending = matches.rows.filter(m => !m.played).length;
+    if (!matches.rows.length || pending) {
+      return res.json({ weekStart, weekEndExclusive: end, complete: false, remaining: pending, standings: null });
+    }
+    const result = await pool.query(
+      `SELECT p.id AS player_id, p.name,
+              COALESCE(SUM(CASE WHEN m.played AND g.points = m.result_points THEN g.points ELSE 0 END), 0) AS points,
+              COUNT(*) FILTER (WHERE m.played AND g.points = m.result_points) AS correct_count
+       FROM room_players rp
+       JOIN players p ON p.id = rp.player_id
+       LEFT JOIN guesses g ON g.player_id = p.id
+       LEFT JOIN matches m ON m.id = g.match_id AND m.match_date >= $2 AND m.match_date < $3
+       WHERE rp.room_id = $1 AND p.is_active = 1
+       GROUP BY p.id, p.name
+       ORDER BY points DESC, correct_count DESC, p.name ASC`,
+      [roomId, weekStart, end]
+    );
+    res.json({ weekStart, weekEndExclusive: end, complete: true, remaining: 0,
+      standings: result.rows.map((r, i) => ({ rank: i + 1, playerId: r.player_id, name: r.name,
+        points: Number(r.points), correctCount: Number(r.correct_count) })) });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ============================================================
 // ADMIN ENDPOINTS
 // ============================================================
