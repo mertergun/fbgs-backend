@@ -90,6 +90,13 @@
             box-shadow: var(--shadow);
         }
 
+        /* Stable leaderboard columns and chronological match dots */
+        #leaderboardList .team-result-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: .55rem; }
+        #leaderboardList .team-result-item { display: grid; grid-template-columns: 2rem 1.2rem .5rem 1.5rem minmax(0, 1fr); align-items: center; column-gap: .4rem; font-size: .8rem; min-width: 0; }
+        #leaderboardList .team-result-item > span { min-width: 0; }
+        #leaderboardList .dot-legend { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; min-width: 0; }
+        #leaderboardList .dot-legend .status-icon { width: .7rem; height: .7rem; flex: 0 0 .7rem; }
+        @media (min-width: 900px) { #leaderboardList .team-result-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem 1.5rem; } }
         /* Leaderboard team result dots */
         .team-result-grid {
             display: grid;
@@ -1511,12 +1518,12 @@ function renderLeaderboard() {
             if (g.points === match.actualPoints) {
                 p.earned[team] += g.points;
                 p.visibleCorrectCount++;
-                p.icons[team].push('correct');
+                p.icons[team].push({ matchId: match.id, status: 'correct' });
             } else {
-                p.icons[team].push('incorrect');
+                p.icons[team].push({ matchId: match.id, status: 'incorrect' });
             }
         } else {
-            p.icons[team].push('tbd');
+            p.icons[team].push({ matchId: match.id, status: 'tbd' });
         }
     });
 
@@ -1543,7 +1550,15 @@ function renderLeaderboard() {
         const teamBreakdown = SCOREBOARD_TEAMS.map(team => {
             const meta = TEAM_META[team];
             const teamCount = allMatches.filter(m => m.team === team).length;
-            const iconDots = padArray(p.icons[team], teamCount, 'tbd').map(s => {
+            // Render a fixed slot per scheduled match, ordered by match date.
+            // Never append pending placeholders ahead of played matches.
+            const orderedMatches = allMatches.filter(m => m.team === team).sort((a, b) => {
+                const da = Date.parse(a.matchDate || a.match_date || '') || 0;
+                const db = Date.parse(b.matchDate || b.match_date || '') || 0;
+                return da - db || String(a.id).localeCompare(String(b.id), undefined, { numeric: true });
+            });
+            const statuses = new Map(p.icons[team].map(item => [String(item.matchId), item.status]));
+            const iconDots = orderedMatches.map(m => statuses.get(String(m.id)) || 'tbd').map(s => {
                 const label = s === 'correct' ? 'Doğru' : s === 'incorrect' ? 'Yanlış' : 'Bekliyor';
                 return '<div class="status-icon ' + s + '" title="' + label + '"></div>';
             }).join('');
