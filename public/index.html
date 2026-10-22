@@ -1969,8 +1969,14 @@ async function renderWeeklyCompetition() {
                 const line = document.createElement('div');
                 line.className = 'flex justify-between gap-3 py-2 border-b';
                 const name = document.createElement('span'); name.textContent = player.rank + '. ' + player.name;
-                const points = document.createElement('strong'); points.textContent = player.points + ' puan';
-                line.append(name, points); resultBox.appendChild(line);
+                const points = document.createElement('strong');
+                points.textContent = player.correctCount + ' doğru tahmin';
+                points.title = 'Doğru tahmin edilen maç puanlarının toplamı: ' + player.points;
+                const detail = document.createElement('small');
+                detail.textContent = player.points + ' maç puanı';
+                detail.style.cssText = 'display:block;font-weight:400;opacity:.7;font-size:.75rem;text-align:right';
+                const score = document.createElement('div'); score.append(points, detail);
+                line.append(name, score); resultBox.appendChild(line);
             });
         } catch (error) { resultBox.textContent = 'Haftalık sonuçlar yüklenemedi.'; }
     }
