@@ -615,7 +615,41 @@
             background: #818cf8;
             color: #0f172a;
         }
-    </style>
+    
+/* Weekly overview: screenshot-friendly, restrained result colors. */
+#weeklyPredictions, #weeklyCompetition { border: 1px solid var(--border-color, #e2e8f0); }
+.weekly-week-select { background: var(--bg-card, #fff); color: inherit; }
+.weekly-legend { display:flex; flex-wrap:wrap; gap: .5rem 1rem; margin: 0 0 1rem; font-size:.75rem; opacity:.9; }
+.weekly-legend-item { display:inline-flex; align-items:center; gap:.35rem; }
+.weekly-legend-dot { width:.65rem; height:.65rem; border-radius:50%; display:inline-block; }
+.weekly-matrix-scroll { overflow-x:auto; border:1px solid #dbe3ee; border-radius:12px; }
+.weekly-matrix { border-collapse:separate; border-spacing:0; width:100%; font-size:.8rem; }
+.weekly-matrix thead { background:#eaf0f9; color:#233650; }
+.weekly-matrix th, .weekly-matrix td { padding:.7rem .6rem; border-bottom:1px solid #e5eaf2; text-align:center; white-space:nowrap; }
+.weekly-matrix th:first-child { text-align:left; min-width:155px; }
+.weekly-matrix tbody th { font-weight:500; background:#f8fafc; color:#334155; }
+.weekly-matrix tbody th strong { display:block; font-size:.78rem; }
+.weekly-matrix tbody th small { display:block; font-size:.68rem; color:#64748b; margin-top:.15rem; }
+.weekly-matrix tbody tr:last-child > * { border-bottom:0; }
+.weekly-matrix tbody tr:hover { background:rgba(148,163,184,.08); }
+.weekly-guess { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:.6rem; font-weight:750; }
+.weekly-correct { background:#d1fae5; color:#065f46; }
+.weekly-incorrect { background:#fee2e2; color:#991b1b; }
+.weekly-pending { background:#e2e8f0; color:#475569; }
+.weekly-missing { background:#f1f5f9; color:#94a3b8; }
+.weekly-legend-dot.weekly-correct { background:#10b981; }
+.weekly-legend-dot.weekly-incorrect { background:#ef4444; }
+.weekly-legend-dot.weekly-pending { background:#94a3b8; }
+.weekly-legend-dot.weekly-missing { background:#f1f5f9; border:1px solid #94a3b8; }
+@media (prefers-color-scheme:dark) {
+  .weekly-matrix thead { background:#24364d; color:#e2e8f0; }
+  .weekly-matrix tbody th { background:#1e293b; color:#e2e8f0; }
+  .weekly-matrix tbody th small { color:#cbd5e1; }
+  .weekly-matrix-scroll { border-color:#475569; }
+  .weekly-matrix th, .weekly-matrix td { border-bottom-color:#475569; }
+}
+
+</style>
 </head>
 <body class="bg-gray-100 min-h-screen p-4 flex flex-col items-center">
 
@@ -1887,6 +1921,19 @@ function weekMonday(dateString) {
     d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
     return d.toISOString().slice(0, 10);
 }
+
+function weekLabel(week) {
+    const games = allMatches.filter(m => weekMonday(m.matchDate) === week).map(m => m.matchDate).sort();
+    if (!games.length) return '';
+    const thursday = new Date(week + 'T12:00:00Z'); thursday.setUTCDate(thursday.getUTCDate() + 3);
+    const year = thursday.getUTCFullYear();
+    const firstThursday = new Date(Date.UTC(year, 0, 4, 12));
+    firstThursday.setUTCDate(firstThursday.getUTCDate() - (firstThursday.getUTCDay() + 6) % 7);
+    const number = 1 + Math.round((new Date(week + 'T12:00:00Z') - firstThursday) / 604800000);
+    const short = d => new Date(d + 'T12:00:00Z').toLocaleDateString('tr-TR', {day:'numeric',month:'short',timeZone:'UTC'});
+    return 'Hafta ' + number + ' · ' + short(games[0]) + ' – ' + short(games[games.length - 1]);
+}
+
 let weeklyRequestVersion = 0;
 async function renderWeeklyCompetition() {
     const box = document.getElementById('weeklyCompetitionContent');
@@ -1898,9 +1945,9 @@ async function renderWeeklyCompetition() {
     box.innerHTML = '<label for="weeklyWeekSelect">Maç haftası</label> <select id="weeklyWeekSelect" class="p-2 rounded border mb-3"></select><div id="weeklyWeekResults"></div>';
     const select = box.querySelector('select');
     weeks.forEach((week, i) => {
-        const end = new Date(week + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 6);
+        
         const opt = document.createElement('option'); opt.value = week;
-        opt.textContent = 'Hafta ' + (weeks.length - i) + ' · ' + week + ' – ' + end.toISOString().slice(0,10);
+        opt.textContent = weekLabel(week);
         select.appendChild(opt);
     });
     select.value = current;
@@ -1932,6 +1979,7 @@ async function renderWeeklyCompetition() {
 }
 
 
+
 function renderWeeklyPredictions() {
     const section = document.getElementById('weeklyPredictions');
     const box = document.getElementById('weeklyPredictionsContent');
@@ -1944,12 +1992,11 @@ function renderWeeklyPredictions() {
     const previous = box.querySelector('select')?.value;
     box.replaceChildren();
     const select = document.createElement('select');
-    select.className = 'p-2 rounded border mb-3 w-full';
+    select.className = 'weekly-week-select p-2 rounded-lg border mb-3 w-full';
     select.setAttribute('aria-label', 'Maç haftası');
-    weeks.forEach((week, i) => {
-        const end = new Date(week + 'T12:00:00Z'); end.setUTCDate(end.getUTCDate() + 6);
+    weeks.forEach(week => {
         const opt = document.createElement('option');
-        opt.value = week; opt.textContent = 'Hafta ' + (weeks.length - i) + ' · ' + week + ' – ' + end.toISOString().slice(0, 10);
+        opt.value = week; opt.textContent = weekLabel(week);
         select.appendChild(opt);
     });
     const current = weeks.find(w => w <= new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Amsterdam'})) || weeks[0];
@@ -1958,36 +2005,52 @@ function renderWeeklyPredictions() {
     box.append(select, content);
     function draw() {
         content.replaceChildren();
-        const matches = allMatches.filter(m => weekMonday(m.matchDate) === select.value).sort((a,b) => a.matchDate.localeCompare(b.matchDate) || String(a.id).localeCompare(String(b.id)));
+        const matches = allMatches.filter(m => weekMonday(m.matchDate) === select.value)
+            .sort((a,b) => a.matchDate.localeCompare(b.matchDate) || String(a.id).localeCompare(String(b.id)));
         const players = allLeaderboard.map(p => p.name);
         if (!players.length) { content.textContent = 'Oyuncu bulunamadı.'; return; }
+        const legend = document.createElement('div');
+        legend.className = 'weekly-legend';
+        [['Doğru', 'correct'], ['Yanlış', 'incorrect'], ['Bekliyor', 'pending'], ['Tahmin yok', 'missing']].forEach(([name, status]) => {
+            const item = document.createElement('span');
+            item.className = 'weekly-legend-item';
+            const dot = document.createElement('span'); dot.className = 'weekly-legend-dot weekly-' + status;
+            item.append(dot, document.createTextNode(name)); legend.appendChild(item);
+        });
+        content.appendChild(legend);
         const wrapper = document.createElement('div');
-        wrapper.style.cssText = 'overflow-x:auto;max-width:100%';
+        wrapper.className = 'weekly-matrix-scroll';
         const table = document.createElement('table');
-        table.style.cssText = 'border-collapse:collapse;width:100%;font-size:12px;min-width:420px';
-        const head = document.createElement('tr');
+        table.className = 'weekly-matrix';
+        const head = document.createElement('thead');
+        const headerRow = document.createElement('tr');
         ['Maç', ...players].forEach(value => {
             const cell = document.createElement('th'); cell.textContent = value;
-            cell.style.cssText = 'padding:8px 6px;border-bottom:2px solid #9ca3af;text-align:left;white-space:nowrap';
-            head.appendChild(cell);
+            headerRow.appendChild(cell);
         });
-        table.appendChild(head);
+        head.appendChild(headerRow); table.appendChild(head);
+        const body = document.createElement('tbody');
         matches.forEach(match => {
             const row = document.createElement('tr');
-            const label = document.createElement('td');
-            label.textContent = match.team + ' – ' + match.opponent + ' (' + match.matchDate.slice(5) + ')';
-            label.style.cssText = 'padding:8px 6px;border-bottom:1px solid #9ca3af;min-width:150px';
-            row.appendChild(label);
+            const label = document.createElement('th');
+            label.scope = 'row';
+            const team = document.createElement('strong'); team.textContent = match.team + ' – ' + match.opponent;
+            const date = document.createElement('small'); date.textContent = match.matchDate.slice(5);
+            label.append(team, date); row.appendChild(label);
             players.forEach(name => {
                 const cell = document.createElement('td');
                 const guess = allGuesses.find(g => g.matchId === match.id && g.playerName === name);
-                cell.textContent = guess ? String(guess.points) : '–';
-                cell.style.cssText = 'padding:8px 6px;border-bottom:1px solid #9ca3af;text-align:center;font-weight:600';
-                row.appendChild(cell);
+                const status = !guess ? 'missing' : !match.played ? 'pending' : Number(guess.points) === Number(match.actualPoints) ? 'correct' : 'incorrect';
+                const pill = document.createElement('span');
+                pill.className = 'weekly-guess weekly-' + status;
+                pill.textContent = guess ? String(guess.points) : '–';
+                pill.title = name + ': ' + ({correct:'Doğru',incorrect:'Yanlış',pending:'Sonuç bekleniyor',missing:'Tahmin yok'})[status];
+                pill.setAttribute('aria-label', pill.title);
+                cell.appendChild(pill); row.appendChild(cell);
             });
-            table.appendChild(row);
+            body.appendChild(row);
         });
-        wrapper.appendChild(table); content.appendChild(wrapper);
+        table.appendChild(body); wrapper.appendChild(table); content.appendChild(wrapper);
     }
     select.addEventListener('change', draw);
     draw();
