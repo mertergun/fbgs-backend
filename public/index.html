@@ -762,6 +762,7 @@
     <div id="messageBox" class="fixed top-4 left-1/2 -translate-x-1/2 bg-green-500 text-white p-4 rounded-lg shadow-xl z-50 transform transition-transform duration-300 scale-0 origin-center"></div>
 </div>
 
+<script src="/rounds.js"></script>
 <script>
 // ============================================================
 // THEME (runs first — must be before page paint to prevent FOUC)
@@ -1915,53 +1916,48 @@ function highlightSelectedGuess() {
 // VIEWS
 // ============================================================
 
-function weekMonday(dateString) {
-    const d = new Date(dateString + 'T12:00:00Z');
-    if (Number.isNaN(d.getTime())) return null;
-    d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7);
-    return d.toISOString().slice(0, 10);
+function roundLabel(round) {
+    const short = d => new Date(d + 'T12:00:00Z').toLocaleDateString('tr-TR', {day:'numeric',month:'short',timeZone:'UTC'});
+    return 'Tur ' + round.number + ' · ' + short(round.startDate) + ' – ' + short(round.endDate);
 }
 
-function weekLabel(week) {
-    const games = allMatches.filter(m => weekMonday(m.matchDate) === week).map(m => m.matchDate).sort();
-    if (!games.length) return '';
-    const thursday = new Date(week + 'T12:00:00Z'); thursday.setUTCDate(thursday.getUTCDate() + 3);
-    const year = thursday.getUTCFullYear();
-    const firstThursday = new Date(Date.UTC(year, 0, 4, 12));
-    firstThursday.setUTCDate(firstThursday.getUTCDate() - (firstThursday.getUTCDay() + 6) % 7);
-    const number = 1 + Math.round((new Date(week + 'T12:00:00Z') - firstThursday) / 604800000);
-    const short = d => new Date(d + 'T12:00:00Z').toLocaleDateString('tr-TR', {day:'numeric',month:'short',timeZone:'UTC'});
-    return 'Hafta ' + number + ' · ' + short(games[0]) + ' – ' + short(games[games.length - 1]);
+function overviewRounds() {
+    return EuropeanRounds.buildRounds(allMatches).reverse();
+}
+
+function currentRoundId(rounds) {
+    const today = new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Amsterdam'});
+    return (rounds.find(r => r.startDate <= today) || rounds[rounds.length - 1])?.id;
 }
 
 let weeklyRequestVersion = 0;
 async function renderWeeklyCompetition() {
     const box = document.getElementById('weeklyCompetitionContent');
     if (!box || !currentRoom || !Array.isArray(allMatches)) return;
-    const weeks = [...new Set(allMatches.map(m => weekMonday(m.matchDate)).filter(Boolean))].sort().reverse();
-    const current = weeks.find(w => w <= new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Amsterdam'})) || weeks[0];
-    if (!current) { box.textContent = 'Henüz maç haftası yok.'; return; }
+    const rounds = overviewRounds();
+    const current = currentRoundId(rounds);
+    if (!current) { box.textContent = 'Henüz maç turu yok.'; return; }
+    const previous = box.querySelector('select')?.value;
     const version = ++weeklyRequestVersion;
-    box.innerHTML = '<label for="weeklyWeekSelect">Maç haftası</label> <select id="weeklyWeekSelect" class="p-2 rounded border mb-3"></select><div id="weeklyWeekResults"></div>';
+    box.innerHTML = '<label for="weeklyWeekSelect">Avrupa turu</label> <select id="weeklyWeekSelect" class="p-2 rounded border mb-3"></select><div id="weeklyWeekResults"></div>';
     const select = box.querySelector('select');
-    weeks.forEach((week, i) => {
-        
-        const opt = document.createElement('option'); opt.value = week;
-        opt.textContent = weekLabel(week);
+    rounds.forEach(round => {
+        const opt = document.createElement('option'); opt.value = round.id;
+        opt.textContent = roundLabel(round);
         select.appendChild(opt);
     });
-    select.value = current;
+    select.value = rounds.some(r => r.id === previous) ? previous : current;
     async function loadWeek() {
         const week = select.value;
         const resultBox = box.querySelector('#weeklyWeekResults');
         resultBox.textContent = 'Yükleniyor…';
         try {
-            const response = await fetch(API_BASE + '/api/weekly-competition?roomId=' + encodeURIComponent(currentRoom.id) + '&weekStart=' + encodeURIComponent(week));
+            const response = await fetch(API_BASE + '/api/weekly-competition?roomId=' + encodeURIComponent(currentRoom.id) + '&roundId=' + encodeURIComponent(week));
             if (!response.ok) throw new Error('HTTP ' + response.status);
             const data = await response.json();
             if (version !== weeklyRequestVersion || select.value !== week) return;
             if (!data.complete) {
-                resultBox.textContent = data.remaining ? 'Sonuçlar bekleniyor: ' + data.remaining + ' maçın sonucu henüz girilmedi.' : 'Bu hafta için maç yok.';
+                resultBox.textContent = data.remaining ? 'Sonuçlar bekleniyor: ' + data.remaining + ' maçın sonucu henüz girilmedi.' : 'Bu tur için maç yok.';
                 return;
             }
             resultBox.replaceChildren();
@@ -1978,7 +1974,9 @@ async function renderWeeklyCompetition() {
                 const score = document.createElement('div'); score.append(points, detail);
                 line.append(name, score); resultBox.appendChild(line);
             });
-        } catch (error) { resultBox.textContent = 'Haftalık sonuçlar yüklenemedi.'; }
+        } catch (error) {
+            if (version === weeklyRequestVersion && select.value === week) resultBox.textContent = 'Haftalık sonuçlar yüklenemedi.';
+        }
     }
     select.addEventListener('change', loadWeek);
     await loadWeek();
@@ -1993,25 +1991,26 @@ function renderWeeklyPredictions() {
     const locked = Boolean(currentRoom && currentRoom.isLocked);
     section.classList.toggle('hidden', !locked);
     if (!locked) { box.replaceChildren(); return; }
-    const weeks = [...new Set(allMatches.map(m => weekMonday(m.matchDate)).filter(Boolean))].sort().reverse();
-    if (!weeks.length) { box.textContent = 'Henüz maç yok.'; return; }
+    const rounds = overviewRounds();
+    if (!rounds.length) { box.textContent = 'Henüz maç yok.'; return; }
     const previous = box.querySelector('select')?.value;
     box.replaceChildren();
     const select = document.createElement('select');
     select.className = 'weekly-week-select p-2 rounded-lg border mb-3 w-full';
-    select.setAttribute('aria-label', 'Maç haftası');
-    weeks.forEach(week => {
+    select.setAttribute('aria-label', 'Avrupa turu');
+    rounds.forEach(round => {
         const opt = document.createElement('option');
-        opt.value = week; opt.textContent = weekLabel(week);
+        opt.value = round.id; opt.textContent = roundLabel(round);
         select.appendChild(opt);
     });
-    const current = weeks.find(w => w <= new Date().toLocaleDateString('en-CA', {timeZone:'Europe/Amsterdam'})) || weeks[0];
-    select.value = weeks.includes(previous) ? previous : current;
+    const current = currentRoundId(rounds);
+    select.value = rounds.some(r => r.id === previous) ? previous : current;
     const content = document.createElement('div');
     box.append(select, content);
     function draw() {
         content.replaceChildren();
-        const matches = allMatches.filter(m => weekMonday(m.matchDate) === select.value)
+        const round = rounds.find(r => r.id === select.value);
+        const matches = allMatches.filter(m => round.matchIds.includes(m.id))
             .sort((a,b) => a.matchDate.localeCompare(b.matchDate) || String(a.id).localeCompare(String(b.id)));
         const players = allLeaderboard.map(p => p.name);
         if (!players.length) { content.textContent = 'Oyuncu bulunamadı.'; return; }
