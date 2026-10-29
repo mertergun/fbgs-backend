@@ -30,3 +30,7 @@ data/
 # Package lock (we use package-lock.json but not yarn.lock)
 yarn.lock
 /.mcp.json
+
+# Local database exports made before context-only corrections
+backups/
+*.context-backup.json

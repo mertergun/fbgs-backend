@@ -31,7 +31,13 @@ correct. Room lock and guess visibility rules are unchanged.
 ## Fixture source caution
 
 The tracked source is `SEED_MATCHES` in `db.js`. Its comments reference
-`data/fixture_26_27.csv`, but that CSV is absent and `data/` is ignored. Startup
+the former `data/fixture_26_27.csv`, but that CSV is absent and `data/` is ignored. Startup
 upserts fixture dates and league context from the embedded seed, preserving
 results and guesses. Database-only fixture corrections will be overwritten on
 the next startup unless the seed is corrected too.
+
+The reviewed domestic context correction and TFF source links are in
+[docs/super-lig-context-review.md](docs/super-lig-context-review.md).
+The guarded updater is `scripts/update-league-context.js`; see the report for
+dry-run, backup, and application instructions. Do not start the app to run a
+dry-run: normal startup performs its existing broad seed sync.
