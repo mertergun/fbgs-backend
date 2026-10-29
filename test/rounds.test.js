@@ -140,6 +140,7 @@ test('both UI selectors and prediction matrix use identical rounds, labels and r
         set(value) { this._value = value; }
     });
     const matches = (await (await fetch(base + '/api/matches')).json());
+    for (const match of matches) assert.equal(match.matchDate, fixtures.find(m => m.id === match.id).matchDate);
     const guesses = await (await fetch(base + '/api/guesses?token=room_one')).json();
     const context = vm.createContext({ document, EuropeanRounds: { buildRounds }, API_BASE:base,
         currentRoom:{id:1,isLocked:true}, allMatches:matches, allGuesses:guesses,

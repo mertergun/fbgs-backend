@@ -147,7 +147,7 @@ app.get('/api/invite/:token', async (req, res) => {
 app.get('/api/matches', async (req, res) => {
   try {
     const { token } = req.query;
-    const matchesResult = await pool.query('SELECT * FROM matches ORDER BY tournament, team, match_date');
+    const matchesResult = await pool.query('SELECT *, match_date::text AS fixture_date FROM matches ORDER BY tournament, team, match_date');
     const matches = matchesResult.rows;
 
     if (!token) {
@@ -218,7 +218,8 @@ function formatMatch(m) {
     tournament: m.tournament,
     opponent: m.opponent,
     homeOrAway: m.home_or_away,
-    matchDate: m.match_date ? (m.match_date.toISOString ? m.match_date.toISOString().split('T')[0] : m.match_date) : null,
+    // Preserve a DATE as a calendar date, regardless of the server time zone.
+    matchDate: m.fixture_date,
     prevLeagueContext: m.prev_league_context,
     nextLeagueContext: m.next_league_context,
     opponentContext: m.opponent_context,
@@ -466,9 +467,9 @@ app.get('/api/weekly-competition', async (req, res) => {
       return res.status(400).json({ error: 'Valid roomId and roundId required' });
     }
     const matches = await pool.query(
-      'SELECT *, match_date::text AS round_date FROM matches'
+      'SELECT *, match_date::text AS fixture_date FROM matches'
     );
-    const round = buildRounds(matches.rows.map(m => ({ ...m, matchDate: m.round_date }))).find(r => r.id === roundId);
+    const round = buildRounds(matches.rows.map(formatMatch)).find(r => r.id === roundId);
     if (!round) return res.status(404).json({ error: 'Round not found; refresh the fixture list' });
     const roundMatches = matches.rows.filter(m => round.matchIds.includes(m.id));
     const pending = roundMatches.filter(m => !m.played || ![0, 1, 3].includes(m.result_points)).length;
