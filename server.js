@@ -6,6 +6,7 @@ const WebSocket = require('ws');
 const crypto = require('crypto');
 const path = require('path');
 const { pool, initialize } = require('./db');
+const { buildRounds } = require('./public/rounds');
 
 const app = express();
 const server = http.createServer(app);
@@ -455,27 +456,26 @@ async function getLeaderboard(roomId) {
   }));
 }
 
-// Weekly competition: Monday–Sunday in Europe/Amsterdam, published only once
-// every scheduled match in that week has a recorded result.
+// Keep the endpoint name for the weekly competition UI; membership now follows
+// European rounds, including fixtures spanning calendar-week boundaries.
 app.get('/api/weekly-competition', async (req, res) => {
   try {
     const roomId = Number(req.query.roomId);
-    const weekStart = String(req.query.weekStart || '');
-    if (!Number.isSafeInteger(roomId) || roomId <= 0 || !/^\d{4}-\d{2}-\d{2}$/.test(weekStart)) {
-      return res.status(400).json({ error: 'Valid roomId and Monday weekStart (YYYY-MM-DD) required' });
+    const roundId = String(req.query.roundId || '');
+    if (!Number.isSafeInteger(roomId) || roomId <= 0 || !roundId) {
+      return res.status(400).json({ error: 'Valid roomId and roundId required' });
     }
-    const monday = new Date(weekStart + 'T00:00:00Z');
-    if (Number.isNaN(monday.getTime()) || monday.toISOString().slice(0, 10) !== weekStart || monday.getUTCDay() !== 1) {
-      return res.status(400).json({ error: 'weekStart must be a valid Monday' });
-    }
-    const end = new Date(monday.getTime() + 7 * 86400000).toISOString().slice(0, 10);
     const matches = await pool.query(
-      'SELECT id, played FROM matches WHERE match_date >= $1 AND match_date < $2',
-      [weekStart, end]
+      'SELECT *, match_date::text AS round_date FROM matches'
     );
-    const pending = matches.rows.filter(m => !m.played).length;
-    if (!matches.rows.length || pending) {
-      return res.json({ weekStart, weekEndExclusive: end, complete: false, remaining: pending, standings: null });
+    const round = buildRounds(matches.rows.map(m => ({ ...m, matchDate: m.round_date }))).find(r => r.id === roundId);
+    if (!round) return res.status(404).json({ error: 'Round not found; refresh the fixture list' });
+    const roundMatches = matches.rows.filter(m => round.matchIds.includes(m.id));
+    const pending = roundMatches.filter(m => !m.played || ![0, 1, 3].includes(m.result_points)).length;
+    const metadata = { roundId: round.id, roundNumber: round.number, startDate: round.startDate,
+      endDate: round.endDate, matchIds: round.matchIds };
+    if (pending) {
+      return res.json({ ...metadata, complete: false, remaining: pending, standings: null });
     }
     const result = await pool.query(
       `SELECT p.id AS player_id, p.name,
@@ -483,14 +483,14 @@ app.get('/api/weekly-competition', async (req, res) => {
               COUNT(*) FILTER (WHERE m.played AND g.points = m.result_points) AS correct_count
        FROM room_players rp
        JOIN players p ON p.id = rp.player_id
-       LEFT JOIN matches m ON m.match_date >= $2 AND m.match_date < $3
+       LEFT JOIN matches m ON m.id = ANY($2::varchar[])
        LEFT JOIN guesses g ON g.player_id = p.id AND g.match_id = m.id
        WHERE rp.room_id = $1 AND p.is_active = 1
        GROUP BY p.id, p.name
        ORDER BY correct_count DESC, points DESC, p.name ASC`,
-      [roomId, weekStart, end]
+      [roomId, round.matchIds]
     );
-    res.json({ weekStart, weekEndExclusive: end, complete: true, remaining: 0,
+    res.json({ ...metadata, complete: true, remaining: 0,
       standings: result.rows.map((r, i) => ({ rank: i + 1, playerId: r.player_id, name: r.name,
         points: Number(r.points), correctCount: Number(r.correct_count) })) });
   } catch (err) {
@@ -830,7 +830,7 @@ app.get('/api/health', (req, res) => {
 });
 
 // Start server
-initialize().then(() => {
+if (require.main === module) initialize().then(() => {
   server.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`WebSocket server on ws://localhost:${PORT}`);
@@ -843,3 +843,5 @@ initialize().then(() => {
   console.error('Failed to initialize:', err);
   process.exit(1);
 });
+
+module.exports = { app, server, wss };
