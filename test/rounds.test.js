@@ -130,8 +130,9 @@ test('locked room reveals its guesses; unlocked room keeps opponents hidden', as
     await db.exec('UPDATE rooms SET is_locked=true WHERE id=1');
 });
 
-test('both UI selectors and prediction matrix use identical rounds, labels and result colors', async () => {
-    const { document } = parseHTML('<html><body><section id="weeklyPredictions"><div id="weeklyPredictionsContent"></div></section><div id="weeklyCompetitionContent"></div></body></html>');
+function overviewHarness(matches, guesses, fetchImpl = fetch) {
+    const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
+    const { document } = parseHTML(html);
     // linkedom does not implement the browser select.value setter.
     const selectPrototype = Object.getPrototypeOf(document.createElement('select'));
     Object.defineProperty(selectPrototype, 'value', {
@@ -139,38 +140,99 @@ test('both UI selectors and prediction matrix use identical rounds, labels and r
         get() { return this._value ?? this.querySelector('option')?.value ?? ''; },
         set(value) { this._value = value; }
     });
+    const context = vm.createContext({ document, EuropeanRounds: { buildRounds }, API_BASE:base,
+        currentRoom:{id:1,isLocked:true}, allMatches:matches, allGuesses:guesses,
+        allLeaderboard:[{name:'Ada'},{name:'Bora'},{name:'No guesses'}], fetch:fetchImpl });
+    for (const script of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(script[1]);
+    vm.runInContext(html.slice(html.indexOf('function roundLabel('), html.indexOf('function showView(')), context);
+    return { document, context, select:document.getElementById('weeklyRoundSelect'),
+        refresh:()=>vm.runInContext('renderWeeklyOverview()', context) };
+}
+
+test('one shared selector updates predictions and ranking with matching rounds and status colors', async () => {
     const matches = (await (await fetch(base + '/api/matches')).json());
     for (const match of matches) assert.equal(match.matchDate, fixtures.find(m => m.id === match.id).matchDate);
     const guesses = await (await fetch(base + '/api/guesses?token=room_one')).json();
-    const context = vm.createContext({ document, EuropeanRounds: { buildRounds }, API_BASE:base,
-        currentRoom:{id:1,isLocked:true}, allMatches:matches, allGuesses:guesses,
-        allLeaderboard:[{name:'Ada'},{name:'Bora'},{name:'No guesses'}], fetch });
-    const html = fs.readFileSync(require.resolve('../public/index.html'), 'utf8');
-    for (const script of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) new vm.Script(script[1]);
-    vm.runInContext(html.slice(html.indexOf('function roundLabel('), html.indexOf('function showView(')), context);
-    await vm.runInContext('renderWeeklyCompetition()', context);
-    vm.runInContext('renderWeeklyPredictions()', context);
-    const competitionSelect = document.querySelector('#weeklyCompetitionContent select');
-    const predictionSelect = document.querySelector('#weeklyPredictionsContent select');
+    const { document, context, select, refresh } = overviewHarness(matches, guesses);
+    await refresh();
+    assert.equal(document.querySelectorAll('#weeklyRoundControl select').length,1);
+    assert.equal(document.querySelectorAll('#weeklyPredictions select, #weeklyCompetition select').length,0);
+    assert.equal(select.getAttribute('aria-controls'),'weeklyPredictions weeklyCompetition');
     const options = s => [...s.querySelectorAll('option')].map(o => [o.value,o.textContent]);
-    assert.deepEqual(options(competitionSelect), options(predictionSelect));
-    assert.equal(options(predictionSelect).length, 9);
-    assert(options(predictionSelect).some(([id,label]) => id === rounds[3].id && /3 Kas.*12 Kas/.test(label)));
-    predictionSelect.value = rounds[3].id;
-    predictionSelect.dispatchEvent(new document.defaultView.Event('change'));
+    assert.equal(options(select).length, 9);
+    assert(options(select).some(([id,label]) => id === rounds[3].id && /3 Kas.*12 Kas/.test(label)));
+    select.value = rounds[3].id;
+    await select.onchange();
     assert.equal(document.querySelectorAll('.weekly-matrix tbody tr').length, 4);
     assert.equal(document.querySelectorAll('.weekly-guess.weekly-correct').length, 3);
     assert(document.querySelector('.weekly-guess.weekly-missing'));
+    assert(document.getElementById('weeklyCompetitionContent').textContent.includes('2 doğru tahmin'));
     context.allGuesses.push({ playerName:'Bora', matchId:'bjk_4', points:0 });
     context.allMatches.find(m => m.id === 'ts_3').played = false;
-    predictionSelect.dispatchEvent(new document.defaultView.Event('change'));
+    await select.onchange();
     assert(document.querySelector('.weekly-guess.weekly-incorrect'));
     assert(document.querySelector('.weekly-guess.weekly-pending'));
     // Preserve selected round on data refresh, then hide and clear on unlock.
-    vm.runInContext('renderWeeklyPredictions()', context);
-    assert.equal(document.querySelector('#weeklyPredictionsContent select').value, rounds[3].id);
+    await refresh();
+    assert.equal(select.value, rounds[3].id);
     context.currentRoom.isLocked = false;
-    vm.runInContext('renderWeeklyPredictions()', context);
+    await refresh();
     assert(document.getElementById('weeklyPredictions').classList.contains('hidden'));
     assert.equal(document.getElementById('weeklyPredictionsContent').textContent, '');
+    assert.equal(select.disabled,false); // ranking can still use the selector
+});
+
+test('rapid round changes ignore stale ranking responses, errors and earlier requests for the same round', async () => {
+    const pending=[];
+    const fakeFetch=url=>new Promise((resolve,reject)=>pending.push({url,resolve,reject}));
+    const { document, select, refresh } = overviewHarness(fixtures, [], fakeFetch);
+    const initial=refresh();
+    select.value=rounds[3].id;
+    const older=select.onchange();
+    assert.equal(document.querySelectorAll('.weekly-matrix tbody tr').length,4);
+    select.value=rounds[0].id;
+    const middle=select.onchange();
+    assert.equal(document.querySelectorAll('.weekly-matrix tbody tr').length,3);
+    select.value=rounds[3].id;
+    const latest=select.onchange();
+    const box=document.getElementById('weeklyCompetitionContent');
+    assert.equal(box.textContent,'Yükleniyor…');
+    assert.equal(box.getAttribute('aria-busy'),'true');
+    assert.equal(new URL(pending.at(-1).url).searchParams.get('roundId'),rounds[3].id);
+    pending[3].resolve({ok:true,json:async()=>({complete:true,standings:[{rank:1,name:'Latest',points:3,correctCount:1}]})});
+    await latest;
+    assert(box.textContent.includes('Latest'));
+    assert.equal(box.getAttribute('aria-busy'),'false');
+    pending[1].resolve({ok:true,json:async()=>({complete:false,remaining:4})});
+    pending[2].reject(new Error('stale error'));
+    pending[0].resolve({ok:true,json:async()=>({complete:false,remaining:9})});
+    await Promise.all([initial,older,middle]);
+    assert(box.textContent.includes('Latest'));
+    assert.equal(document.querySelectorAll('.weekly-matrix tbody tr').length,4);
+});
+
+test('shared selection falls back after schedule removal, clears empty rounds and ignores old-room responses', async () => {
+    const pending=[];
+    const { document, context, select, refresh } = overviewHarness(fixtures, [], url=>new Promise(resolve=>pending.push({url,resolve})));
+    const oldRoom=refresh();
+    context.currentRoom={id:2,isLocked:false};
+    const newRoom=refresh();
+    assert.equal(new URL(pending[1].url).searchParams.get('roomId'),'2');
+    pending[1].resolve({ok:true,json:async()=>({complete:false,remaining:3})});
+    await newRoom;
+    pending[0].resolve({ok:true,json:async()=>({complete:true,standings:[{rank:1,name:'Wrong room',points:3,correctCount:1}]})});
+    await oldRoom;
+    assert(!document.getElementById('weeklyCompetitionContent').textContent.includes('Wrong room'));
+    select.value=rounds[3].id;
+    context.allMatches=fixtures.filter(m=>!rounds[3].matchIds.includes(m.id));
+    const fallback=refresh();
+    assert.notEqual(select.value,rounds[3].id);
+    pending[2].resolve({ok:true,json:async()=>({complete:false,remaining:3})});
+    await fallback;
+    context.allMatches=[];
+    await refresh();
+    assert.equal(select.disabled,true);
+    assert(document.getElementById('weeklyRoundControl').classList.contains('hidden'));
+    assert.equal(document.getElementById('weeklyCompetitionContent').textContent,'Henüz maç turu yok.');
+    assert.equal(document.getElementById('weeklyPredictionsContent').textContent,'');
 });
