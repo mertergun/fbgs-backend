@@ -1,0 +1,695 @@
+{
+  "baselineCommit": "87496211e2260034b52acfbe532ad6749d19b7c8",
+  "corrections": [
+    {
+      "id": "bjk_1",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Olympique Marseille",
+        "home_or_away": "Home",
+        "match_date": "2026-09-17",
+        "opponent_context": "Olympique Marseille, Fransa temsilcisi olarak Ligue 1 liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Pierre-Emerick Aubameyang (veya yeni yıldızı)."
+      },
+      "before": {
+        "prev_league_context": "Hafta 5: Erzurumspor FK (🏠 - 13 Eyl)",
+        "next_league_context": "Hafta 6: Amed SK (✈️ - 20 Eyl)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 5: Erzurumspor FK (🏠 - 11 Eyl)",
+        "next_league_context": "Hafta 6: Amed SK (✈️ - 20 Eyl)"
+      },
+      "evidence": {
+        "previous": "317827",
+        "next": "317832"
+      }
+    },
+    {
+      "id": "bjk_2",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Hoffenheim",
+        "home_or_away": "Away",
+        "match_date": "2026-10-15",
+        "opponent_context": "Hoffenheim, Almanya temsilcisi olarak Bundesliga liginde mücadele ediyor. Geçen sezonu orta sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Andrej Kramarić."
+      },
+      "before": {
+        "prev_league_context": "Hafta 8: Trabzonspor (✈️ - 4 Eki)",
+        "next_league_context": "Hafta 9: İstanbul Başakşehir (🏠 - 18 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 7: Kocaelispor (🏠 - 11 Eki)",
+        "next_league_context": "Hafta 8: Trabzonspor (✈️ - 19 Eki)"
+      },
+      "evidence": {
+        "previous": "317845",
+        "next": "317847"
+      }
+    },
+    {
+      "id": "bjk_3",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Crystal Palace",
+        "home_or_away": "Home",
+        "match_date": "2026-10-22",
+        "opponent_context": "Crystal Palace, İngiltere temsilcisi olarak Premier League liginde mücadele ediyor. Geçen sezonu orta sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Eberechi Eze."
+      },
+      "before": {
+        "prev_league_context": "Hafta 9: İstanbul Başakşehir (🏠 - 18 Eki)",
+        "next_league_context": "Hafta 10: Samsunspor (🏠 - 25 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 8: Trabzonspor (✈️ - 19 Eki)",
+        "next_league_context": "Hafta 9: İstanbul Başakşehir (🏠 - 26 Eki)"
+      },
+      "evidence": {
+        "previous": "317847",
+        "next": "317863"
+      }
+    },
+    {
+      "id": "bjk_4",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Celtic",
+        "home_or_away": "Away",
+        "match_date": "2026-11-05",
+        "opponent_context": "Celtic, İskoçya temsilcisi olarak Scottish Premiership liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Kyogo Furuhashi."
+      },
+      "before": {
+        "prev_league_context": "Hafta 11: Göztepe (✈️ - 1 Kas)",
+        "next_league_context": "Hafta 12: Gaziantep FK (🏠 - 8 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 10: Kasımpaşa (✈️ - 1 Kas)",
+        "next_league_context": "Hafta 11: Gençlerbirliği (🏠 - 8 Kas)"
+      },
+      "evidence": {
+        "previous": "317866",
+        "next": "317881"
+      }
+    },
+    {
+      "id": "bjk_5",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Hapoel Be'er Sheva",
+        "home_or_away": "Home",
+        "match_date": "2026-11-26",
+        "opponent_context": "Hapoel Be'er Sheva, İsrail temsilcisi olarak Ligat ha'Al liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Miguel Vítor."
+      },
+      "before": {
+        "prev_league_context": "Hafta 13: Galatasaray (🏠 - 22 Kas)",
+        "next_league_context": "Hafta 14: Kocaelispor (🏠 - 29 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 12: Konyaspor (✈️ - 22 Kas)",
+        "next_league_context": "Hafta 13: Galatasaray (🏠 - 30 Kas)"
+      },
+      "evidence": {
+        "previous": "317888",
+        "next": "317899"
+      }
+    },
+    {
+      "id": "bjk_6",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Bayer Leverkusen",
+        "home_or_away": "Away",
+        "match_date": "2026-12-10",
+        "opponent_context": "Bayer Leverkusen, Almanya temsilcisi olarak Bundesliga liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Florian Wirtz."
+      },
+      "before": {
+        "prev_league_context": "Hafta 15: Alanyaspor (✈️ - 6 Ara)",
+        "next_league_context": "Hafta 16: Çaykur Rizespor (🏠 - 13 Ara)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 14: Samsunspor (🏠 - 6 Ara)",
+        "next_league_context": "Hafta 15: Gaziantep FK (✈️ - 14 Ara)"
+      },
+      "evidence": {
+        "previous": "317908",
+        "next": "317910"
+      }
+    },
+    {
+      "id": "bjk_7",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Union Saint-Gilloise",
+        "home_or_away": "Home",
+        "match_date": "2027-01-21",
+        "opponent_context": "Union Saint-Gilloise, Belçika temsilcisi olarak Pro League liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Cameron Puertas."
+      },
+      "before": {
+        "prev_league_context": "Hafta 17: Eyüpspor (✈️ - 17 Oca)",
+        "next_league_context": "Hafta 18: Alanyaspor (✈️ - 24 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 17: Göztepe (✈️ - 17 Oca, geçici)",
+        "next_league_context": "Hafta 18: Eyüpspor (✈️ - 24 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317932",
+        "next": "317944"
+      }
+    },
+    {
+      "id": "bjk_8",
+      "expectedIdentity": {
+        "team": "Beşiktaş",
+        "tournament": "UEL",
+        "opponent": "Omonia",
+        "home_or_away": "Away",
+        "match_date": "2027-01-28",
+        "opponent_context": "Omonia, Kıbrıs temsilcisi olarak Cyprus First Division liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Willy Semedo."
+      },
+      "before": {
+        "prev_league_context": "Hafta 18: Alanyaspor (✈️ - 24 Oca)",
+        "next_league_context": "Hafta 19: Çorum FK (✈️ - 31 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 18: Eyüpspor (✈️ - 24 Oca, geçici)",
+        "next_league_context": "Hafta 19: Alanyaspor (🏠 - 31 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317944",
+        "next": "317948"
+      }
+    },
+    {
+      "id": "fb_1",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Roma",
+        "home_or_away": "Home",
+        "match_date": "2026-09-10",
+        "opponent_context": "Roma, İtalya temsilcisi olarak Serie A liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Paulo Dybala."
+      },
+      "before": {
+        "prev_league_context": "Hafta 4: Beşiktaş (🏠 - 6 Eyl)",
+        "next_league_context": "Hafta 5: Gaziantep FK (✈️ - 13 Eyl)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 4: Beşiktaş (🏠 - 5 Eyl)",
+        "next_league_context": "Hafta 5: Gaziantep FK (✈️ - 14 Eyl)"
+      },
+      "evidence": {
+        "previous": "317817",
+        "next": "317820"
+      }
+    },
+    {
+      "id": "fb_2",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Aston Villa",
+        "home_or_away": "Away",
+        "match_date": "2026-10-14",
+        "opponent_context": "Aston Villa, İngiltere temsilcisi olarak Premier League liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Ollie Watkins."
+      },
+      "before": {
+        "prev_league_context": "Hafta 8: Alanyaspor (🏠 - 4 Eki)",
+        "next_league_context": "Hafta 9: Galatasaray (✈️ - 18 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 7: Çaykur Rizespor (✈️ - 10 Eki)",
+        "next_league_context": "Hafta 8: Alanyaspor (🏠 - 17 Eki)"
+      },
+      "evidence": {
+        "previous": "317841",
+        "next": "317853"
+      }
+    },
+    {
+      "id": "fb_3",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Slavia Prague",
+        "home_or_away": "Home",
+        "match_date": "2026-10-20",
+        "opponent_context": "Slavia Prague, Çekya temsilcisi olarak Czech First League liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Mojmír Chytil."
+      },
+      "before": {
+        "prev_league_context": "Hafta 9: Galatasaray (✈️ - 18 Eki)",
+        "next_league_context": "Hafta 10: Göztepe (🏠 - 25 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 8: Alanyaspor (🏠 - 17 Eki)",
+        "next_league_context": "Hafta 9: Galatasaray (✈️ - 26 Eki)"
+      },
+      "evidence": {
+        "previous": "317853",
+        "next": "317862"
+      }
+    },
+    {
+      "id": "fb_4",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Liverpool",
+        "home_or_away": "Home",
+        "match_date": "2026-11-04",
+        "opponent_context": "Liverpool, İngiltere temsilcisi olarak Premier League liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Mohamed Salah."
+      },
+      "before": {
+        "prev_league_context": "Hafta 11: Çorum FK (✈️ - 1 Kas)",
+        "next_league_context": "Hafta 12: Kocaelispor (✈️ - 8 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 10: Göztepe (🏠 - 31 Eki)",
+        "next_league_context": "Hafta 11: Çorum FK (✈️ - 8 Kas)"
+      },
+      "evidence": {
+        "previous": "317871",
+        "next": "317879"
+      }
+    },
+    {
+      "id": "fb_5",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Shakhtar Donetsk",
+        "home_or_away": "Away",
+        "match_date": "2026-11-25",
+        "opponent_context": "Shakhtar Donetsk, Ukrayna temsilcisi olarak Ukrainian Premier League liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Georgiy Sudakov."
+      },
+      "before": {
+        "prev_league_context": "Hafta 13: Erzurumspor FK (🏠 - 22 Kas)",
+        "next_league_context": "Hafta 14: İstanbul Başakşehir (✈️ - 29 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 12: Kocaelispor (✈️ - 21 Kas)",
+        "next_league_context": "Hafta 13: Erzurumspor FK (🏠 - 29 Kas)"
+      },
+      "evidence": {
+        "previous": "317890",
+        "next": "317898"
+      }
+    },
+    {
+      "id": "fb_6",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "LASK",
+        "home_or_away": "Away",
+        "match_date": "2026-12-09",
+        "opponent_context": "LASK, Avusturya temsilcisi olarak Austrian Bundesliga liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Robert Žulj."
+      },
+      "before": {
+        "prev_league_context": "Hafta 15: Trabzonspor (🏠 - 6 Ara)",
+        "next_league_context": "Hafta 16: Kasımpaşa (✈️ - 13 Ara)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 14: İstanbul Başakşehir (✈️ - 5 Ara)",
+        "next_league_context": "Hafta 15: Trabzonspor (🏠 - 13 Ara)"
+      },
+      "evidence": {
+        "previous": "317903",
+        "next": "317916"
+      }
+    },
+    {
+      "id": "fb_7",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Villarreal",
+        "home_or_away": "Home",
+        "match_date": "2027-01-20",
+        "opponent_context": "Villarreal, İspanya temsilcisi olarak La Liga liginde mücadele ediyor. Geçen sezonu orta-üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Gerard Moreno."
+      },
+      "before": {
+        "prev_league_context": "Hafta 17: Amed SK (🏠 - 17 Oca)",
+        "next_league_context": "Hafta 18: Konyaspor (✈️ - 24 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 17: Amed SK (🏠 - 17 Oca, geçici)",
+        "next_league_context": "Hafta 18: Gençlerbirliği (🏠 - 24 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317934",
+        "next": "317941"
+      }
+    },
+    {
+      "id": "fb_8",
+      "expectedIdentity": {
+        "team": "Fenerbahçe",
+        "tournament": "UCL",
+        "opponent": "Atletico Madrid",
+        "home_or_away": "Away",
+        "match_date": "2027-01-27",
+        "opponent_context": "Atletico Madrid, İspanya temsilcisi olarak La Liga liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Antoine Griezmann."
+      },
+      "before": {
+        "prev_league_context": "Hafta 18: Konyaspor (✈️ - 24 Oca)",
+        "next_league_context": "Hafta 19: Samsunspor (✈️ - 31 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 18: Gençlerbirliği (🏠 - 24 Oca, geçici)",
+        "next_league_context": "Hafta 19: Konyaspor (✈️ - 31 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317941",
+        "next": "317952"
+      }
+    },
+    {
+      "id": "gs_1",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Sporting CP",
+        "home_or_away": "Away",
+        "match_date": "2026-09-09",
+        "opponent_context": "Sporting CP, Portekiz temsilcisi olarak Primeira Liga liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Viktor Gyökeres."
+      },
+      "before": {
+        "prev_league_context": "Hafta 4: İstanbul Başakşehir (✈️ - 6 Eyl)",
+        "next_league_context": "Hafta 5: Kocaelispor (🏠 - 13 Eyl)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 4: İstanbul Başakşehir (✈️ - 4 Eyl)",
+        "next_league_context": "Hafta 5: Kocaelispor (🏠 - 13 Eyl)"
+      },
+      "evidence": {
+        "previous": "317813",
+        "next": "317826"
+      }
+    },
+    {
+      "id": "gs_2",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Barcelona",
+        "home_or_away": "Home",
+        "match_date": "2026-10-13",
+        "opponent_context": "Barcelona, İspanya temsilcisi olarak La Liga liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Lamine Yamal."
+      },
+      "before": {
+        "prev_league_context": "Hafta 8: Gençlerbirliği (✈️ - 4 Eki)",
+        "next_league_context": "Hafta 9: Fenerbahçe (🏠 - 18 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 7: Kasımpaşa (🏠 - 9 Eki)",
+        "next_league_context": "Hafta 8: Gençlerbirliği (✈️ - 17 Eki)"
+      },
+      "evidence": {
+        "previous": "317844",
+        "next": "317851"
+      }
+    },
+    {
+      "id": "gs_3",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Lille",
+        "home_or_away": "Away",
+        "match_date": "2026-10-21",
+        "opponent_context": "Lille, Fransa temsilcisi olarak Ligue 1 liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Jonathan David."
+      },
+      "before": {
+        "prev_league_context": "Hafta 9: Fenerbahçe (🏠 - 18 Eki)",
+        "next_league_context": "Hafta 10: Konyaspor (✈️ - 25 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 8: Gençlerbirliği (✈️ - 17 Eki)",
+        "next_league_context": "Hafta 9: Fenerbahçe (🏠 - 26 Eki)"
+      },
+      "evidence": {
+        "previous": "317851",
+        "next": "317862"
+      }
+    },
+    {
+      "id": "gs_4",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Stuttgart",
+        "home_or_away": "Home",
+        "match_date": "2026-11-03",
+        "opponent_context": "Stuttgart, Almanya temsilcisi olarak Bundesliga liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Serhou Guirassy."
+      },
+      "before": {
+        "prev_league_context": "Hafta 11: Amed SK (🏠 - 1 Kas)",
+        "next_league_context": "Hafta 12: Samsunspor (🏠 - 8 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 10: Konyaspor (✈️ - 30 Eki)",
+        "next_league_context": "Hafta 11: Amed SK (🏠 - 7 Kas)"
+      },
+      "evidence": {
+        "previous": "317870",
+        "next": "317880"
+      }
+    },
+    {
+      "id": "gs_5",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Aston Villa",
+        "home_or_away": "Home",
+        "match_date": "2026-11-24",
+        "opponent_context": "Aston Villa, İngiltere temsilcisi olarak Premier League liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Ollie Watkins."
+      },
+      "before": {
+        "prev_league_context": "Hafta 13: Beşiktaş (✈️ - 22 Kas)",
+        "next_league_context": "Hafta 14: Çaykur Rizespor (🏠 - 29 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 12: Samsunspor (🏠 - 21 Kas)",
+        "next_league_context": "Hafta 13: Beşiktaş (✈️ - 30 Kas)"
+      },
+      "evidence": {
+        "previous": "317889",
+        "next": "317899"
+      }
+    },
+    {
+      "id": "gs_6",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "AEK Athens",
+        "home_or_away": "Away",
+        "match_date": "2026-12-08",
+        "opponent_context": "AEK Athens, Yunanistan temsilcisi olarak Super League liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Levi García."
+      },
+      "before": {
+        "prev_league_context": "Hafta 15: Eyüpspor (✈️ - 6 Ara)",
+        "next_league_context": "Hafta 16: Gaziantep FK (🏠 - 13 Ara)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 14: Çaykur Rizespor (🏠 - 4 Ara)",
+        "next_league_context": "Hafta 15: Eyüpspor (✈️ - 12 Ara)"
+      },
+      "evidence": {
+        "previous": "317907",
+        "next": "317911"
+      }
+    },
+    {
+      "id": "gs_7",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Feyenoord",
+        "home_or_away": "Home",
+        "match_date": "2027-01-19",
+        "opponent_context": "Feyenoord, Hollanda temsilcisi olarak Eredivisie liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Santiago Giménez."
+      },
+      "before": {
+        "prev_league_context": "Hafta 17: Çorum FK (✈️ - 17 Oca)",
+        "next_league_context": "Hafta 18: Erzurumspor FK (🏠 - 24 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 17: Gaziantep FK (✈️ - 17 Oca, geçici)",
+        "next_league_context": "Hafta 18: Çorum FK (✈️ - 24 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317928",
+        "next": "317943"
+      }
+    },
+    {
+      "id": "gs_8",
+      "expectedIdentity": {
+        "team": "Galatasaray",
+        "tournament": "UCL",
+        "opponent": "Paris Saint-Germain",
+        "home_or_away": "Away",
+        "match_date": "2027-01-27",
+        "opponent_context": "Paris Saint-Germain, Fransa temsilcisi olarak Ligue 1 liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Kylian Mbappé (veya Warren Zaïre-Emery)."
+      },
+      "before": {
+        "prev_league_context": "Hafta 18: Erzurumspor FK (🏠 - 24 Oca)",
+        "next_league_context": "Hafta 19: Göztepe (🏠 - 31 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 18: Çorum FK (✈️ - 24 Oca, geçici)",
+        "next_league_context": "Hafta 19: Erzurumspor FK (🏠 - 31 Oca, geçici)"
+      },
+      "evidence": {
+        "previous": "317943",
+        "next": "317954"
+      }
+    },
+    {
+      "id": "ts_1",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "KuPS Kuopio",
+        "home_or_away": "Away",
+        "match_date": "2026-10-15",
+        "opponent_context": "KuPS Kuopio, Finlandiya temsilcisi olarak Veikkausliiga liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Anton Popovitch."
+      },
+      "before": {
+        "prev_league_context": "Hafta 8: Beşiktaş (🏠 - 4 Eki)",
+        "next_league_context": "Hafta 9: Eyüpspor (✈️ - 18 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 7: Samsunspor (✈️ - 10 Eki)",
+        "next_league_context": "Hafta 8: Beşiktaş (🏠 - 19 Eki)"
+      },
+      "evidence": {
+        "previous": "317846",
+        "next": "317847"
+      }
+    },
+    {
+      "id": "ts_2",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "Hearts",
+        "home_or_away": "Home",
+        "match_date": "2026-10-22",
+        "opponent_context": "Hearts, İskoçya temsilcisi olarak Scottish Premiership liginde mücadele ediyor. Geçen sezonu üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Lawrence Shankland."
+      },
+      "before": {
+        "prev_league_context": "Hafta 9: Eyüpspor (✈️ - 18 Eki)",
+        "next_league_context": "Hafta 10: Gaziantep FK (🏠 - 25 Eki)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 8: Beşiktaş (🏠 - 19 Eki)",
+        "next_league_context": "Hafta 9: Çaykur Rizespor (✈️ - 26 Eki)"
+      },
+      "evidence": {
+        "previous": "317847",
+        "next": "317859"
+      }
+    },
+    {
+      "id": "ts_3",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "Jablonec",
+        "home_or_away": "Home",
+        "match_date": "2026-11-12",
+        "opponent_context": "Jablonec, Çekya temsilcisi olarak Czech First League liginde mücadele ediyor. Geçen sezonu orta sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Jan Chramosta."
+      },
+      "before": {
+        "prev_league_context": "Hafta 12: Eyüpspor (🏠 - 8 Kas)",
+        "next_league_context": "Hafta 13: Göztepe (✈️ - 22 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 11: Alanyaspor (✈️ - 8 Kas)",
+        "next_league_context": "Hafta 12: Eyüpspor (🏠 - 22 Kas)"
+      },
+      "evidence": {
+        "previous": "317876",
+        "next": "317883"
+      }
+    },
+    {
+      "id": "ts_4",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "Red Star Belgrade",
+        "home_or_away": "Away",
+        "match_date": "2026-11-26",
+        "opponent_context": "Red Star Belgrade, Sırbistan temsilcisi olarak Serbian SuperLiga liginde mücadele ediyor. Geçen sezonu şampiyon olarak tamamlayan ekibin en dikkat çeken oyuncusu Guelor Kanga."
+      },
+      "before": {
+        "prev_league_context": "Hafta 13: Göztepe (✈️ - 22 Kas)",
+        "next_league_context": "Hafta 14: Samsunspor (🏠 - 29 Kas)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 12: Eyüpspor (🏠 - 22 Kas)",
+        "next_league_context": "Hafta 13: Göztepe (✈️ - 30 Kas)"
+      },
+      "evidence": {
+        "previous": "317883",
+        "next": "317896"
+      }
+    },
+    {
+      "id": "ts_5",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "CSKA Sofia",
+        "home_or_away": "Away",
+        "match_date": "2026-12-10",
+        "opponent_context": "CSKA Sofia, Bulgaristan temsilcisi olarak First League liginde mücadele ediyor. Geçen sezonu zirve yarışında tamamlayan ekibin en dikkat çeken oyuncusu Tobias Heintz."
+      },
+      "before": {
+        "prev_league_context": "Hafta 15: Fenerbahçe (✈️ - 6 Ara)",
+        "next_league_context": "Hafta 16: Kocaelispor (🏠 - 13 Ara)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 14: Çorum FK (🏠 - 6 Ara)",
+        "next_league_context": "Hafta 15: Fenerbahçe (✈️ - 13 Ara)"
+      },
+      "evidence": {
+        "previous": "317901",
+        "next": "317916"
+      }
+    },
+    {
+      "id": "ts_6",
+      "expectedIdentity": {
+        "team": "Trabzonspor",
+        "tournament": "UECL",
+        "opponent": "Freiburg",
+        "home_or_away": "Home",
+        "match_date": "2026-12-17",
+        "opponent_context": "Freiburg, Almanya temsilcisi olarak Bundesliga liginde mücadele ediyor. Geçen sezonu orta-üst sıralarda tamamlayan ekibin en dikkat çeken oyuncusu Vincenzo Grifo."
+      },
+      "before": {
+        "prev_league_context": "Hafta 16: Kocaelispor (🏠 - 13 Ara)",
+        "next_league_context": "Hafta 17: Kasımpaşa (🏠 - 17 Oca)"
+      },
+      "after": {
+        "prev_league_context": "Hafta 15: Fenerbahçe (✈️ - 13 Ara)",
+        "next_league_context": "Hafta 16: Kocaelispor (🏠 - 21 Ara)"
+      },
+      "evidence": {
+        "previous": "317916",
+        "next": "317919"
+      }
+    }
+  ]
+}
