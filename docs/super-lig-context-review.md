@@ -83,7 +83,7 @@ No live database connection is configured in this workspace. The report compares
 
 ## Validation and dry-run output
 
-`npm test`: 14 tests passed, including all six European-round regressions. The
+`npm test`: 16 tests passed, including all eight European-round/shared-selector regressions. The
 new tests verify the reviewed evidence against every seed row, unchanged
 European identity and round membership, backups, fail-closed drift detection,
 transaction rollback, idempotency, and unchanged guesses, players, rooms and

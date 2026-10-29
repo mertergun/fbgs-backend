@@ -32,8 +32,8 @@ correct. Room lock and guess visibility rules are unchanged.
 
 ## Fixture source caution
 
-The tracked source is `SEED_MATCHES` in `db.js`. Its comments reference
-the former `data/fixture_26_27.csv`, but that CSV is absent and `data/` is ignored. Startup
+The tracked source is `SEED_MATCHES` in `db.js`. The formerly referenced
+`data/fixture_26_27.csv` is absent and `data/` is ignored. Startup
 upserts fixture dates and league context from the embedded seed, preserving
 results and guesses. Database-only fixture corrections will be overwritten on
 the next startup unless the seed is corrected too.
