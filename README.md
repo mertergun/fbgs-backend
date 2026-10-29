@@ -16,7 +16,9 @@ fixtures leave smaller rounds; unmatched games remain separate. No fixture is
 reassigned by its completion status.
 
 Selectors display sequential round numbers and the earliest/latest fixture
-dates. Round IDs derive from their member match IDs, so input ordering and
+dates. One dashboard selector controls both weekly predictions and ranking,
+preserves the selected round on refresh, and ignores outdated ranking replies
+after changing rounds or rooms. Round IDs derive from their member match IDs, so input ordering and
 result updates do not change membership. Schedule edits can change membership;
 refresh clients after a schedule correction.
 
