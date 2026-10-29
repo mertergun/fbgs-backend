@@ -709,6 +709,10 @@
                 <div class="loading-spinner loading-big"></div>
             </div>
             <div id="leaderboardList" class="space-y-3"></div>
+            <div id="weeklyRoundControl" class="card mt-6 hidden">
+                <label for="weeklyRoundSelect" class="block font-bold mb-2">Avrupa turu</label>
+                <select id="weeklyRoundSelect" class="weekly-week-select p-2 rounded-lg border w-full" aria-controls="weeklyPredictions weeklyCompetition"></select>
+            </div>
             <section id="weeklyPredictions" class="card mt-6 hidden" aria-label="Haftalık tahminler"><h3 class="font-bold text-lg mb-2">Haftalık Tahminler</h3><p class="text-sm mb-3">Oda kilitlendiğinde tüm oyuncuların tahminleri görünür. WhatsApp için ekran görüntüsü alabilirsiniz.</p><div id="weeklyPredictionsContent"></div></section>
             <section id="weeklyCompetition" class="card mt-6" aria-label="Haftalık yarışma"><h3 class="font-bold text-lg mb-3">Haftalık Yarışma</h3><div id="weeklyCompetitionContent">Yükleniyor…</div></section>
         </div>
@@ -1162,8 +1166,7 @@ function loadAllData(silent = false) {
             updateRoomBadge();
         }
         renderLeaderboard();
-        renderWeeklyCompetition();
-        renderWeeklyPredictions();
+        renderWeeklyOverview();
         populateMatchList(currentMatchListFilter);
         // Rebuild the whole carousel only if needed — preserve position
         if (allMatches[currentMatchIndex]) {
@@ -1931,134 +1934,133 @@ function currentRoundId(rounds) {
 }
 
 let weeklyRequestVersion = 0;
-async function renderWeeklyCompetition() {
-    const box = document.getElementById('weeklyCompetitionContent');
-    if (!box || !currentRoom || !Array.isArray(allMatches)) return;
+function renderWeeklyOverview() {
+    const control = document.getElementById('weeklyRoundControl');
+    const select = document.getElementById('weeklyRoundSelect');
+    if (!control || !select) return;
     const rounds = overviewRounds();
-    const current = currentRoundId(rounds);
-    if (!current) { box.textContent = 'Henüz maç turu yok.'; return; }
-    const previous = box.querySelector('select')?.value;
-    const version = ++weeklyRequestVersion;
-    box.innerHTML = '<label for="weeklyWeekSelect">Avrupa turu</label> <select id="weeklyWeekSelect" class="p-2 rounded border mb-3"></select><div id="weeklyWeekResults"></div>';
-    const select = box.querySelector('select');
+    const previous = select.value;
+    select.replaceChildren();
     rounds.forEach(round => {
-        const opt = document.createElement('option'); opt.value = round.id;
-        opt.textContent = roundLabel(round);
-        select.appendChild(opt);
+        const option = document.createElement('option');
+        option.value = round.id;
+        option.textContent = roundLabel(round);
+        select.appendChild(option);
     });
-    select.value = rounds.some(r => r.id === previous) ? previous : current;
-    async function loadWeek() {
-        const week = select.value;
-        const resultBox = box.querySelector('#weeklyWeekResults');
-        resultBox.textContent = 'Yükleniyor…';
-        try {
-            const response = await fetch(API_BASE + '/api/weekly-competition?roomId=' + encodeURIComponent(currentRoom.id) + '&roundId=' + encodeURIComponent(week));
-            if (!response.ok) throw new Error('HTTP ' + response.status);
-            const data = await response.json();
-            if (version !== weeklyRequestVersion || select.value !== week) return;
-            if (!data.complete) {
-                resultBox.textContent = data.remaining ? 'Sonuçlar bekleniyor: ' + data.remaining + ' maçın sonucu henüz girilmedi.' : 'Bu tur için maç yok.';
-                return;
-            }
-            resultBox.replaceChildren();
-            data.standings.forEach(player => {
-                const line = document.createElement('div');
-                line.className = 'flex justify-between gap-3 py-2 border-b';
-                const name = document.createElement('span'); name.textContent = player.rank + '. ' + player.name;
-                const points = document.createElement('strong');
-                points.textContent = player.correctCount + ' doğru tahmin';
-                points.title = 'Doğru tahmin edilen maç puanlarının toplamı: ' + player.points;
-                const detail = document.createElement('small');
-                detail.textContent = player.points + ' maç puanı';
-                detail.style.cssText = 'display:block;font-weight:400;opacity:.7;font-size:.75rem;text-align:right';
-                const score = document.createElement('div'); score.append(points, detail);
-                line.append(name, score); resultBox.appendChild(line);
-            });
-        } catch (error) {
-            if (version === weeklyRequestVersion && select.value === week) resultBox.textContent = 'Haftalık sonuçlar yüklenemedi.';
-        }
+    select.value = rounds.some(r => r.id === previous) ? previous : (currentRoundId(rounds) || '');
+    select.disabled = !currentRoom || !rounds.length;
+    control.classList.toggle('hidden', select.disabled);
+    function updateViews() {
+        const round = rounds.find(r => r.id === select.value);
+        renderWeeklyPredictions(round);
+        return renderWeeklyCompetition(round);
     }
-    select.addEventListener('change', loadWeek);
-    await loadWeek();
+    select.onchange = updateViews;
+    return updateViews();
+}
+
+async function renderWeeklyCompetition(round) {
+    const version = ++weeklyRequestVersion;
+    const box = document.getElementById('weeklyCompetitionContent');
+    if (!box) return;
+    const roomId = currentRoom?.id;
+    if (!roomId || !round) {
+        box.textContent = 'Henüz maç turu yok.';
+        box.setAttribute('aria-busy', 'false');
+        return;
+    }
+    const isCurrent = () => version === weeklyRequestVersion && currentRoom?.id === roomId;
+    box.textContent = 'Yükleniyor…';
+    box.setAttribute('aria-busy', 'true');
+    try {
+        const response = await fetch(API_BASE + '/api/weekly-competition?roomId=' + encodeURIComponent(roomId) + '&roundId=' + encodeURIComponent(round.id));
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (!isCurrent()) return;
+        if (!data.complete) {
+            box.textContent = data.remaining ? 'Sonuçlar bekleniyor: ' + data.remaining + ' maçın sonucu henüz girilmedi.' : 'Bu tur için maç yok.';
+            return;
+        }
+        box.replaceChildren();
+        data.standings.forEach(player => {
+            const line = document.createElement('div');
+            line.className = 'flex justify-between gap-3 py-2 border-b';
+            const name = document.createElement('span'); name.textContent = player.rank + '. ' + player.name;
+            const points = document.createElement('strong');
+            points.textContent = player.correctCount + ' doğru tahmin';
+            points.title = 'Doğru tahmin edilen maç puanlarının toplamı: ' + player.points;
+            const detail = document.createElement('small');
+            detail.textContent = player.points + ' maç puanı';
+            detail.style.cssText = 'display:block;font-weight:400;opacity:.7;font-size:.75rem;text-align:right';
+            const score = document.createElement('div'); score.append(points, detail);
+            line.append(name, score); box.appendChild(line);
+        });
+    } catch (error) {
+        if (isCurrent()) box.textContent = 'Haftalık sonuçlar yüklenemedi.';
+    } finally {
+        if (isCurrent()) box.setAttribute('aria-busy', 'false');
+    }
 }
 
 
 
-function renderWeeklyPredictions() {
+function renderWeeklyPredictions(round) {
     const section = document.getElementById('weeklyPredictions');
     const box = document.getElementById('weeklyPredictionsContent');
     if (!section || !box) return;
     const locked = Boolean(currentRoom && currentRoom.isLocked);
     section.classList.toggle('hidden', !locked);
     if (!locked) { box.replaceChildren(); return; }
-    const rounds = overviewRounds();
-    if (!rounds.length) { box.textContent = 'Henüz maç yok.'; return; }
-    const previous = box.querySelector('select')?.value;
+    if (!round) { box.textContent = 'Henüz maç yok.'; return; }
     box.replaceChildren();
-    const select = document.createElement('select');
-    select.className = 'weekly-week-select p-2 rounded-lg border mb-3 w-full';
-    select.setAttribute('aria-label', 'Avrupa turu');
-    rounds.forEach(round => {
-        const opt = document.createElement('option');
-        opt.value = round.id; opt.textContent = roundLabel(round);
-        select.appendChild(opt);
-    });
-    const current = currentRoundId(rounds);
-    select.value = rounds.some(r => r.id === previous) ? previous : current;
     const content = document.createElement('div');
-    box.append(select, content);
-    function draw() {
-        content.replaceChildren();
-        const round = rounds.find(r => r.id === select.value);
-        const matches = allMatches.filter(m => round.matchIds.includes(m.id))
-            .sort((a,b) => a.matchDate.localeCompare(b.matchDate) || String(a.id).localeCompare(String(b.id)));
-        const players = allLeaderboard.map(p => p.name);
-        if (!players.length) { content.textContent = 'Oyuncu bulunamadı.'; return; }
-        const legend = document.createElement('div');
-        legend.className = 'weekly-legend';
-        [['Doğru', 'correct'], ['Yanlış', 'incorrect'], ['Bekliyor', 'pending'], ['Tahmin yok', 'missing']].forEach(([name, status]) => {
-            const item = document.createElement('span');
-            item.className = 'weekly-legend-item';
-            const dot = document.createElement('span'); dot.className = 'weekly-legend-dot weekly-' + status;
-            item.append(dot, document.createTextNode(name)); legend.appendChild(item);
+    box.append(content);
+    const matches = allMatches.filter(m => round.matchIds.includes(m.id))
+        .sort((a,b) => a.matchDate.localeCompare(b.matchDate) || String(a.id).localeCompare(String(b.id)));
+    const players = allLeaderboard.map(p => p.name);
+    if (!players.length) { content.textContent = 'Oyuncu bulunamadı.'; return; }
+    const legend = document.createElement('div');
+    legend.className = 'weekly-legend';
+    [['Doğru', 'correct'], ['Yanlış', 'incorrect'], ['Bekliyor', 'pending'], ['Tahmin yok', 'missing']].forEach(([name, status]) => {
+        const item = document.createElement('span');
+        item.className = 'weekly-legend-item';
+        const dot = document.createElement('span'); dot.className = 'weekly-legend-dot weekly-' + status;
+        item.append(dot, document.createTextNode(name)); legend.appendChild(item);
+    });
+    content.appendChild(legend);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'weekly-matrix-scroll';
+    const table = document.createElement('table');
+    table.className = 'weekly-matrix';
+    const head = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    ['Maç', ...players].forEach(value => {
+        const cell = document.createElement('th'); cell.textContent = value;
+        headerRow.appendChild(cell);
+    });
+    head.appendChild(headerRow); table.appendChild(head);
+    const body = document.createElement('tbody');
+    matches.forEach(match => {
+        const row = document.createElement('tr');
+        const label = document.createElement('th');
+        label.scope = 'row';
+        const team = document.createElement('strong'); team.textContent = match.team + ' – ' + match.opponent;
+        const date = document.createElement('small'); date.textContent = match.matchDate.slice(5);
+        label.append(team, date); row.appendChild(label);
+        players.forEach(name => {
+            const cell = document.createElement('td');
+            const guess = allGuesses.find(g => g.matchId === match.id && g.playerName === name);
+            const status = !guess ? 'missing' : !match.played ? 'pending' : Number(guess.points) === Number(match.actualPoints) ? 'correct' : 'incorrect';
+            const pill = document.createElement('span');
+            pill.className = 'weekly-guess weekly-' + status;
+            pill.textContent = guess ? String(guess.points) : '–';
+            pill.title = name + ': ' + ({correct:'Doğru',incorrect:'Yanlış',pending:'Sonuç bekleniyor',missing:'Tahmin yok'})[status];
+            pill.setAttribute('aria-label', pill.title);
+            cell.appendChild(pill); row.appendChild(cell);
         });
-        content.appendChild(legend);
-        const wrapper = document.createElement('div');
-        wrapper.className = 'weekly-matrix-scroll';
-        const table = document.createElement('table');
-        table.className = 'weekly-matrix';
-        const head = document.createElement('thead');
-        const headerRow = document.createElement('tr');
-        ['Maç', ...players].forEach(value => {
-            const cell = document.createElement('th'); cell.textContent = value;
-            headerRow.appendChild(cell);
-        });
-        head.appendChild(headerRow); table.appendChild(head);
-        const body = document.createElement('tbody');
-        matches.forEach(match => {
-            const row = document.createElement('tr');
-            const label = document.createElement('th');
-            label.scope = 'row';
-            const team = document.createElement('strong'); team.textContent = match.team + ' – ' + match.opponent;
-            const date = document.createElement('small'); date.textContent = match.matchDate.slice(5);
-            label.append(team, date); row.appendChild(label);
-            players.forEach(name => {
-                const cell = document.createElement('td');
-                const guess = allGuesses.find(g => g.matchId === match.id && g.playerName === name);
-                const status = !guess ? 'missing' : !match.played ? 'pending' : Number(guess.points) === Number(match.actualPoints) ? 'correct' : 'incorrect';
-                const pill = document.createElement('span');
-                pill.className = 'weekly-guess weekly-' + status;
-                pill.textContent = guess ? String(guess.points) : '–';
-                pill.title = name + ': ' + ({correct:'Doğru',incorrect:'Yanlış',pending:'Sonuç bekleniyor',missing:'Tahmin yok'})[status];
-                pill.setAttribute('aria-label', pill.title);
-                cell.appendChild(pill); row.appendChild(cell);
-            });
-            body.appendChild(row);
-        });
-        table.appendChild(body); wrapper.appendChild(table); content.appendChild(wrapper);
-    }
-    select.addEventListener('change', draw);
-    draw();
+        body.appendChild(row);
+    });
+    table.appendChild(body); wrapper.appendChild(table); content.appendChild(wrapper);
 }
 
 function showView(view) {
