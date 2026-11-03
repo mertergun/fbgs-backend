@@ -405,13 +405,15 @@
             if (!form) return;
             e.preventDefault();
 
-            const card = form.closest('.card');
-            const matchId = card.id.replace('match-', '');
-            const score = form.score.value;
-            const points = parseInt(form.points.value);
+            const matchCard = form.closest('[id^="match-"]');
+            const matchId = matchCard?.id.slice('match-'.length);
+            const fields = new FormData(form);
+            const score = String(fields.get('score') || '').trim();
+            const pointsValue = String(fields.get('points') || '');
+            const points = Number(pointsValue);
 
-            if (!score || isNaN(points)) {
-                alert('Lütfen tüm alanları doldurun');
+            if (!matchId || !score || !['0', '1', '3'].includes(pointsValue)) {
+                notify('Please enter a score and select 0, 1, or 3 points.', true);
                 return;
             }
 
