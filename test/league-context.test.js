@@ -50,7 +50,15 @@ test('every seed context has closest-date TFF evidence; all European identity fi
     assert.equal(SEED_MATCHES.length, 30);
     assert.equal(evidence.timeZone, 'Europe/Istanbul');
     for (const c of corrections) {
-        const m = SEED_MATCHES.find(m => m.id === c.id);
+        const current = SEED_MATCHES.find(m => m.id === c.id);
+        // This manifest is an immutable October migration; November date corrections
+        // are tested against the current seed in trabzon-schedule.test.js.
+        const moved = ['ts_3','ts_4','ts_5','ts_6'].includes(c.id);
+        if (moved) {
+            for (const key of ['id','team','opponent','home_or_away','tournament','opponent_context'])
+                assert.equal(current[key], key === 'id' ? c.id : c.expectedIdentity[key]);
+        }
+        const m = moved ? {id:c.id,...c.expectedIdentity,...c.after} : current;
         const {id,prev_league_context,next_league_context,...identity} = m;
         assert.deepEqual(identity, c.expectedIdentity);
         assert.deepEqual({prev_league_context,next_league_context}, c.after);
@@ -67,10 +75,13 @@ test('every seed context has closest-date TFF evidence; all European identity fi
         for (let week=4;week<=19;week++) assert.equal(games.filter(f=>f.week===week).length,1);
     }
     const roundInput = matches => matches.map(m => ({...m,matchDate:m.match_date}));
-    assert.deepEqual(buildRounds(roundInput(SEED_MATCHES)),
+    assert.deepEqual(buildRounds(roundInput(SEED_MATCHES.map(m => {
+            const c = corrections.find(c=>c.id===m.id);
+            return {...m,match_date:c.expectedIdentity.match_date};
+        }))),
         buildRounds(roundInput(corrections.map(c=>({id:c.id,...c.expectedIdentity})))));
     assert.equal(SEED_MATCHES.find(m=>m.id==='fb_3').next_league_context, 'Hafta 9: Galatasaray (✈️ - 26 Eki)');
-    assert.equal(SEED_MATCHES.find(m=>m.id==='ts_6').next_league_context, 'Hafta 16: Kocaelispor (🏠 - 21 Ara)');
+    assert.equal(SEED_MATCHES.find(m=>m.id==='ts_4').next_league_context, 'Hafta 16: Kocaelispor (🏠 - 21 Ara)');
 });
 
 test('dry-run reads baseline, reports 30 pending rows / 58 changed fields, and writes nothing', async () => {
@@ -155,3 +166,4 @@ test('CLI defaults to dry-run and refuses ambiguous or unsafe application argume
     assert.deepEqual(parseArgs(['--apply','--backup','backups/new.json']),{apply:true,backupPath:'backups/new.json'});
     for(const args of [['--apply'],['--apply','--dry-run'],['--backup'],['--force']]) assert.throws(()=>parseArgs(args));
 });
+

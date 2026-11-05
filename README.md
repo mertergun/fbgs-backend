@@ -60,3 +60,27 @@ the bonus and its reason. No player is awarded automatically by this code change
 Startup adds `bonus_points` and `bonus_reason` to existing guesses with zero/empty
 defaults; existing results and prediction values are preserved. Match-outcome
 values (0/1/3) describe predictions, not the score for a correct prediction.
+
+## Trabzonspor schedule correction — 5 November 2026
+
+The UEFA [team fixtures](https://www.uefa.com/uefaconferenceleague/clubs/52731--trabzonspor/matches/)
+and [league-phase schedule](https://www.uefa.com/uefaconferenceleague/news/02a8-217779a8ad3a-b4c75bb82a48-1000--conference-league-league-phase-fixtures/)
+confirm the following dates. IDs remain attached to opponents, not matchday numbers:
+
+| ID | Opponent | Date |
+|---|---|---|
+| ts_1 | KuPS Kuopio (away) | 2026-10-15 |
+| ts_2 | Hearts (home) | 2026-10-22 |
+| ts_6 | Freiburg (home) | 2026-11-05 |
+| ts_5 | CSKA Sofia (away) | 2026-11-26 |
+| ts_3 | Jablonec (home) | 2026-12-10 |
+| ts_4 | Red Star Belgrade (away) | 2026-12-17 |
+
+Deploy this version and restart the server to apply the embedded seed through
+its existing database sync. Refresh clients afterwards to rebuild rounds.
+Predictions, bonuses and recorded results stay with the same opponent and ID;
+no results are inferred or moved between opponents. If a result was previously
+entered against the wrong opponent, correct it separately in Admin.
+Surrounding league context follows the corrected dates using the checked-in TFF
+schedule. The October context migration is historical and intentionally rejects
+these corrected dates; do not rerun it against the November schedule.
