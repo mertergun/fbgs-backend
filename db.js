@@ -104,6 +104,9 @@ async function initialize() {
     )
   `);
 
+  await pool.query(`ALTER TABLE guesses ADD COLUMN IF NOT EXISTS bonus_points INTEGER NOT NULL DEFAULT 0 CHECK (bonus_points >= 0)`);
+  await pool.query(`ALTER TABLE guesses ADD COLUMN IF NOT EXISTS bonus_reason TEXT NOT NULL DEFAULT ''`);
+
   // ===== Private Rooms (multi-league) =====
   await pool.query(`
     CREATE TABLE IF NOT EXISTS rooms (
@@ -174,3 +177,4 @@ async function initialize() {
 }
 
 module.exports = { pool, initialize, SEED_MATCHES };
+

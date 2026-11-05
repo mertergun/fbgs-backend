@@ -24,7 +24,7 @@ before(async () => {
         CREATE TABLE rooms (id integer PRIMARY KEY, is_locked boolean, invite_token text);
         CREATE TABLE room_players (room_id integer, player_id integer);
         CREATE TABLE guesses (id serial PRIMARY KEY, player_id integer, match_id varchar(50),
-            points integer, guessed_at timestamp DEFAULT CURRENT_TIMESTAMP);
+            points integer, bonus_points integer NOT NULL DEFAULT 0, bonus_reason text NOT NULL DEFAULT '', guessed_at timestamp DEFAULT CURRENT_TIMESTAMP);
         INSERT INTO players VALUES (1,'Ada',1,'inv_ada'),(2,'Bora',1,'inv_bora'),
             (3,'Inactive',0,'inv_inactive'),(4,'Other room',1,'inv_other'),(5,'No guesses',1,'inv_none');
         INSERT INTO rooms VALUES (1,true,'room_one'),(2,true,'room_two');
@@ -102,7 +102,7 @@ test('round standings wait for cross-week results, preserve zero-point correct g
     assert.equal(result.complete, true);
     assert.deepEqual(result.matchIds, ids);
     assert.deepEqual(result.standings.map(p => [p.name,p.correctCount,p.points]),
-        [['Ada',2,0],['Bora',1,3],['No guesses',0,0]]);
+        [['Ada',2,2],['Bora',1,1],['No guesses',0,0]]);
     // Corrections take effect immediately and continue to gate completion.
     await db.exec("UPDATE matches SET played=false WHERE id='ts_3'");
     assert.equal((await competition()).complete, false);
@@ -235,4 +235,35 @@ test('shared selection falls back after schedule removal, clears empty rounds an
     assert(document.getElementById('weeklyRoundControl').classList.contains('hidden'));
     assert.equal(document.getElementById('weeklyCompetitionContent').textContent,'Henüz maç turu yok.');
     assert.equal(document.getElementById('weeklyPredictionsContent').textContent,'');
+});
+
+
+test('admin award is authenticated, idempotent, reversible and included in both standings', async () => {
+    const guess = (await db.query("SELECT id FROM guesses WHERE player_id=2 AND match_id='fb_4'")).rows[0];
+    const url = base + '/api/admin/guesses/' + guess.id + '/award';
+    const save = (body, auth = true) => fetch(url, { method:'PUT', headers:{
+        'Content-Type':'application/json', ...(auth ? {'X-Admin-Code':process.env.ADMIN_CODE || 'admin-secret'} : {})
+    }, body:JSON.stringify(body) });
+    assert.equal((await save({totalPoints:8,reason:'Group award'}, false)).status,401);
+    for (const body of [{totalPoints:8,reason:''},{totalPoints:0,reason:'Below base'},
+        {totalPoints:8.5,reason:'Fraction'}, {totalPoints:-1,reason:'Negative'}]) {
+        assert.equal((await save(body)).status,400);
+    }
+    const before = (await competition()).standings.find(p=>p.name==='Bora');
+    for (let i=0;i<2;i++) {
+        const response = await save({totalPoints:8,reason:'Group award'});
+        assert.equal(response.status,200);
+        assert.equal((await response.json()).bonusPoints,7);
+    }
+    const after = (await competition()).standings.find(p=>p.name==='Bora');
+    assert.equal(after.points,before.points+7);
+    assert.equal(after.correctCount,before.correctCount);
+    const overall = await (await fetch(base+'/api/leaderboard?roomId=1')).json();
+    assert.equal(overall.find(p=>p.name==='Bora').totalPoints,9); // 8 plus fb_3's 1
+    await db.exec("UPDATE matches SET result_points=0 WHERE id='fb_4'");
+    assert.equal((await competition()).standings.find(p=>p.name==='Bora').points,0);
+    assert.equal((await save({totalPoints:8,reason:'Wrong guess'})).status,400);
+    await db.exec("UPDATE matches SET result_points=3 WHERE id='fb_4'");
+    assert.equal((await save({totalPoints:1,reason:''})).status,200);
+    assert.equal((await competition()).standings.find(p=>p.name==='Bora').points,before.points);
 });

@@ -117,6 +117,7 @@
                 <button class="tab active" data-tab="matches">Matches</button>
                 <button class="tab" data-tab="rooms">Rooms</button>
                 <button class="tab" data-tab="players">Players</button>
+                <button class="tab" data-tab="awards">Bonus points</button>
                 <button class="tab" data-tab="danger">Danger Zone</button>
             </div>
         </nav>
@@ -190,6 +191,20 @@
             </section>
 
             <!-- Danger Zone Tab -->
+            <section id="tab-awards" class="tab-content hidden">
+                <div class="card space-y-4">
+                    <h2 class="text-xl font-bold">Prediction bonus</h2>
+                    <p class="text-gray-400">Choose a correct prediction and enter its total awarded points (for example, 8). Bonuses apply in all rooms containing this player. Each correct guess earns 1 point. Bonuses count toward ranking.</p>
+                    <form id="award-form" class="space-y-4">
+                        <label class="block">Prediction<select id="award-guess" class="field" required></select></label>
+                        <label class="block">Total awarded points<input id="award-total" class="field" type="number" min="0" max="1000" step="1" required></label>
+                        <label class="block">Reason<input id="award-reason" class="field" maxlength="300"></label>
+                        <p class="text-gray-400">To remove a bonus, save the prediction's normal 1 point as its total.</p>
+                        <button class="btn btn-primary" type="submit">Save award</button>
+                    </form>
+                </div>
+            </section>
+
             <section id="tab-danger" class="tab-content hidden">
                 <div class="max-w-md">
                     <h2 class="text-xl font-bold text-red-400 mb-4">Danger Zone</h2>
@@ -249,6 +264,37 @@
             ADMIN_CODE = '';
             showGate();
         }
+
+        let awardGuesses = [];
+        function selectAward() {
+            const guess = awardGuesses.find(g => String(g.id) === document.getElementById('award-guess').value);
+            document.getElementById('award-total').value = guess ? 1 + guess.bonus_points : '';
+            document.getElementById('award-total').min = 1;
+            document.getElementById('award-reason').value = guess?.bonus_reason || '';
+        }
+        async function initAwards() {
+            try {
+                awardGuesses = (await adminFetch('/api/admin/awards')).filter(g => g.correct);
+                document.getElementById('award-guess').innerHTML = awardGuesses.length ? awardGuesses.map(g =>
+                    `<option value="${g.id}">${escapeHtml(g.match_date)} · ${escapeHtml(g.team)}–${escapeHtml(g.opponent)} · ${escapeHtml(g.name)} (normal 1, bonus +${g.bonus_points})</option>`
+                ).join('') : '<option value="">No correct predictions yet</option>';
+                selectAward();
+            } catch (err) { notify(err.message, true); }
+        }
+        document.getElementById('award-guess').addEventListener('change', selectAward);
+        document.getElementById('award-form').addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = event.target.querySelector('button');
+            button.disabled = true;
+            try {
+                await adminFetch('/api/admin/guesses/' + document.getElementById('award-guess').value + '/award', {
+                    method: 'PUT', body: JSON.stringify({ totalPoints: Number(document.getElementById('award-total').value), reason: document.getElementById('award-reason').value })
+                });
+                notify('Award saved. Leaderboards updated.');
+                await initAwards();
+            } catch (err) { notify(err.message, true); }
+            finally { button.disabled = false; }
+        });
 
         // API helper with auth header
         async function adminFetch(path, options = {}) {
@@ -321,6 +367,7 @@
                 case 'matches': initMatches(); break;
                 case 'rooms': initRooms(); break;
                 case 'players': initPlayers(); break;
+                case 'awards': initAwards(); break;
             }
         }
 
