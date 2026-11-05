@@ -48,10 +48,10 @@ after(async () => {
 test('actual seed: closest dates reunite September and November; absent TS stays absent', () => {
     assert.deepEqual(rounds.map(r => r.matchIds.length), [3,4,4,4,4,4,1,3,3]);
     assert.deepEqual(rounds[0].matchIds, ['gs_1','fb_1','bjk_1']);
-    assert.deepEqual(rounds[3].matchIds, ['gs_4','fb_4','bjk_4','ts_3']);
+    assert.deepEqual(rounds[3].matchIds, ['gs_4','fb_4','bjk_4','ts_6']);
     assert.equal(rounds[3].startDate, '2026-11-03');
-    assert.equal(rounds[3].endDate, '2026-11-12');
-    assert.deepEqual(rounds[6].matchIds, ['ts_6']);
+    assert.equal(rounds[3].endDate, '2026-11-05');
+    assert.deepEqual(rounds[6].matchIds, ['ts_4']);
     const assigned = rounds.flatMap(r => r.matchIds);
     assert.equal(new Set(assigned).size, 30);
     assert.equal(assigned.length, 30);
@@ -93,8 +93,8 @@ test('round standings wait for cross-week results, preserve zero-point correct g
     await db.query('UPDATE matches SET result_points=0 WHERE id=$1', [ids[3]]);
     await db.query('UPDATE matches SET result_points=0 WHERE id=$1', [ids[0]]);
     await db.exec(`INSERT INTO guesses (player_id,match_id,points) VALUES
-        (1,'gs_4',0),(1,'ts_3',0),(2,'fb_4',3),
-        (3,'gs_4',0),(3,'fb_4',3),(3,'bjk_4',3),(3,'ts_3',0),
+        (1,'gs_4',0),(1,'ts_6',0),(2,'fb_4',3),
+        (3,'gs_4',0),(3,'fb_4',3),(3,'bjk_4',3),(3,'ts_6',0),
         (4,'gs_4',0),(4,'fb_4',3), (2,'fb_3',3);`);
     // A correct result outside this round must not count.
     await db.exec("UPDATE matches SET played=true,result_points=3 WHERE id='fb_3'");
@@ -104,9 +104,9 @@ test('round standings wait for cross-week results, preserve zero-point correct g
     assert.deepEqual(result.standings.map(p => [p.name,p.correctCount,p.points]),
         [['Ada',2,2],['Bora',1,1],['No guesses',0,0]]);
     // Corrections take effect immediately and continue to gate completion.
-    await db.exec("UPDATE matches SET played=false WHERE id='ts_3'");
+    await db.exec("UPDATE matches SET played=false WHERE id='ts_6'");
     assert.equal((await competition()).complete, false);
-    await db.exec("UPDATE matches SET played=true WHERE id='ts_3'");
+    await db.exec("UPDATE matches SET played=true WHERE id='ts_6'");
     assert.equal((await competition(rounds[0])).complete, false);
 });
 
@@ -160,7 +160,7 @@ test('one shared selector updates predictions and ranking with matching rounds a
     assert.equal(select.getAttribute('aria-controls'),'weeklyPredictions weeklyCompetition');
     const options = s => [...s.querySelectorAll('option')].map(o => [o.value,o.textContent]);
     assert.equal(options(select).length, 9);
-    assert(options(select).some(([id,label]) => id === rounds[3].id && /3 Kas.*12 Kas/.test(label)));
+    assert(options(select).some(([id,label]) => id === rounds[3].id && /3 Kas.*5 Kas/.test(label)));
     select.value = rounds[3].id;
     await select.onchange();
     assert.equal(document.querySelectorAll('.weekly-matrix tbody tr').length, 4);
@@ -168,7 +168,7 @@ test('one shared selector updates predictions and ranking with matching rounds a
     assert(document.querySelector('.weekly-guess.weekly-missing'));
     assert(document.getElementById('weeklyCompetitionContent').textContent.includes('2 doğru tahmin'));
     context.allGuesses.push({ playerName:'Bora', matchId:'bjk_4', points:0 });
-    context.allMatches.find(m => m.id === 'ts_3').played = false;
+    context.allMatches.find(m => m.id === 'ts_6').played = false;
     await select.onchange();
     assert(document.querySelector('.weekly-guess.weekly-incorrect'));
     assert(document.querySelector('.weekly-guess.weekly-pending'));
