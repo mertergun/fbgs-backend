@@ -268,7 +268,7 @@ app.get('/api/guesses', async (req, res) => {
     const roomIsLocked = Boolean(roomRow && roomRow.is_locked);
 
     const result = await pool.query(
-      `SELECT g.id, g.player_id, g.match_id, g.points, g.guessed_at, p.name as player_name, m.played
+      `SELECT g.id, g.player_id, g.match_id, g.points, g.bonus_points, g.bonus_reason, g.guessed_at, p.name as player_name, m.played
        FROM guesses g
        JOIN players p ON g.player_id = p.id
        JOIN matches m ON g.match_id = m.id
@@ -286,6 +286,8 @@ app.get('/api/guesses', async (req, res) => {
         playerName: r.player_name,
         matchId: r.match_id,
         points: r.points,
+        bonusPoints: r.bonus_points,
+        bonusReason: r.bonus_reason,
         guessedAt: r.guessed_at
       }))
     );
@@ -433,7 +435,7 @@ async function getLeaderboard(roomId) {
       p.id as player_id,
       COALESCE(SUM(
         CASE
-          WHEN g.points = m.result_points AND m.played = true THEN g.points
+          WHEN g.points = m.result_points AND m.played = true THEN 1 + g.bonus_points
           ELSE 0
         END
       ), 0) as total_points,
@@ -446,7 +448,7 @@ async function getLeaderboard(roomId) {
     LEFT JOIN matches m ON g.match_id = m.id
     WHERE rp.room_id = $1 AND p.is_active = 1
     GROUP BY p.id, p.name
-    ORDER BY correct_count DESC, total_points DESC, p.name ASC
+    ORDER BY total_points DESC, correct_count DESC, p.name ASC
   `;
   const result = await pool.query(sql, [roomId]);
   return result.rows.map((r, i) => ({
@@ -480,7 +482,7 @@ app.get('/api/weekly-competition', async (req, res) => {
     }
     const result = await pool.query(
       `SELECT p.id AS player_id, p.name,
-              COALESCE(SUM(CASE WHEN m.played AND g.points = m.result_points THEN g.points ELSE 0 END), 0) AS points,
+              COALESCE(SUM(CASE WHEN m.played AND g.points = m.result_points THEN 1 + g.bonus_points ELSE 0 END), 0) AS points,
               COUNT(*) FILTER (WHERE m.played AND g.points = m.result_points) AS correct_count
        FROM room_players rp
        JOIN players p ON p.id = rp.player_id
@@ -488,7 +490,7 @@ app.get('/api/weekly-competition', async (req, res) => {
        LEFT JOIN guesses g ON g.player_id = p.id AND g.match_id = m.id
        WHERE rp.room_id = $1 AND p.is_active = 1
        GROUP BY p.id, p.name
-       ORDER BY correct_count DESC, points DESC, p.name ASC`,
+       ORDER BY points DESC, correct_count DESC, p.name ASC`,
       [roomId, round.matchIds]
     );
     res.json({ ...metadata, complete: true, remaining: 0,
@@ -510,6 +512,40 @@ function requireAdmin(req, res, next) {
   }
   next();
 }
+
+// Awards belong to an existing prediction and follow it in every room.
+app.get('/api/admin/awards', requireAdmin, async (req, res) => {
+  try {
+    const result = await pool.query(`SELECT g.id, p.name, m.team, m.opponent,
+      m.match_date::text AS match_date, g.points, g.bonus_points, g.bonus_reason,
+      (m.played AND g.points = m.result_points) AS correct
+      FROM guesses g JOIN players p ON p.id=g.player_id JOIN matches m ON m.id=g.match_id
+      WHERE m.played=true ORDER BY m.match_date DESC, m.id, p.name`);
+    res.json(result.rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.put('/api/admin/guesses/:id/award', requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const { totalPoints, reason } = req.body;
+    if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(totalPoints) ||
+        totalPoints < 0 || totalPoints > 1000 || typeof reason !== 'string' || reason.length > 300) {
+      return res.status(400).json({ error: 'Valid guess, total points (0–1000), and reason required' });
+    }
+    // One atomic update prevents repeated saves from stacking bonuses. A corrected
+    // result suspends the award until the prediction is correct again.
+    const result = await pool.query(`UPDATE guesses g
+      SET bonus_points=$2-1, bonus_reason=$3
+      FROM matches m WHERE g.id=$1 AND m.id=g.match_id AND m.played=true
+        AND g.points=m.result_points AND $2>=1
+        AND ($2=1 OR length(trim($3))>0)
+      RETURNING g.id, g.bonus_points`, [id, totalPoints, reason.trim()]);
+    if (!result.rowCount) return res.status(400).json({ error: 'Choose a correct prediction, a total of at least 1, and a reason for the bonus' });
+    await broadcastLeaderboard();
+    res.json({ success: true, bonusPoints: result.rows[0].bonus_points });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 
 // POST /api/admin/players - Create a new player with invite token
 // Body: { name, editUntil?, roomId? }
@@ -846,3 +882,4 @@ if (require.main === module) initialize().then(() => {
 });
 
 module.exports = { app, server, wss };
+

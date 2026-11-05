@@ -26,8 +26,8 @@ refresh clients after a schedule correction.
 `complete`, `remaining`, and `standings`. The former `weekStart` selector is no
 longer accepted: a calendar week cannot identify a cross-week round. Unknown
 round IDs return 404. Standings stay hidden until every member has `played=true`
-and result points of 0, 1 or 3. Ranking stays correct guesses descending, then
-earned match points descending, then name. A correct 0-point guess counts as
+and result points of 0, 1 or 3. Ranking uses correct-guess points plus bonuses descending, then
+correct guesses descending, then name. A correct 0-point guess counts as
 correct. Room lock and guess visibility rules are unchanged.
 
 ## Fixture source caution
@@ -43,3 +43,20 @@ The reviewed domestic context correction and TFF source links are in
 The guarded updater is `scripts/update-league-context.js`; see the report for
 dry-run, backup, and application instructions. Do not start the app to run a
 dry-run: normal startup performs its existing broad seed sync.
+
+
+## Manual prediction bonuses
+
+In Admin → **Bonus points**, choose the correct prediction by match and player,
+enter the **total awarded points** (e.g. 8), add a reason, and save. Every correct
+guess earns 1 point, so an 8-point award stores a +7 bonus. Repeated saves replace
+the award rather than accumulating it. Save 1 to remove it.
+Bonuses follow the prediction in every room containing the player and count in
+weekly and overall points and rankings. Correct-guess counts remain unchanged.
+Ranking sorts by points, correct guesses, then name. A result correction suspends
+the bonus whenever the prediction is no longer correct. The weekly overview shows
+the bonus and its reason. No player is awarded automatically by this code change.
+
+Startup adds `bonus_points` and `bonus_reason` to existing guesses with zero/empty
+defaults; existing results and prediction values are preserved. Match-outcome
+values (0/1/3) describe predictions, not the score for a correct prediction.

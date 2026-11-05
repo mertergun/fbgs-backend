@@ -694,7 +694,7 @@
         </div>
         <div id="scoreboardView" class="card hidden">
             <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
-                <h2 class="text-2xl font-bold text-gray-800" title="Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer">Puan Durumu ⓘ</h2>
+                <h2 class="text-2xl font-bold text-gray-800" title="Sıralama: Puan (doğru tahmin + bonus) → Doğru tahmin sayısı">Puan Durumu ⓘ</h2>
                 <div class="flex space-x-2">
                     <button id="viewGameCarouselButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg shadow-md hover:bg-blue-700 transition-colors text-sm">Tahmin Yap</button>
                     <button id="viewMatchListButton" class="btn-ghost text-sm">Maç Listesi</button>
@@ -1558,7 +1558,7 @@ function renderLeaderboard() {
 
         if (match.played) {
             if (g.points === match.actualPoints) {
-                p.earned[team] += g.points;
+                p.earned[team] += 1 + (g.bonusPoints || 0);
                 p.visibleCorrectCount++;
                 p.icons[team].push({ matchId: match.id, status: 'correct' });
             } else {
@@ -1574,8 +1574,8 @@ function renderLeaderboard() {
     });
 
     const players = Object.values(playerMap).sort((a, b) =>
-        b.correctCount - a.correctCount ||
         b.leaderboardTotal - a.leaderboardTotal ||
+        b.correctCount - a.correctCount ||
         a.name.localeCompare(b.name, 'tr')
     );
 
@@ -1624,15 +1624,15 @@ function renderLeaderboard() {
                 </div>
                 <div class="flex items-center space-x-2 text-sm shrink-0 lb-earned-wrap">
                     <div class="text-right">
-                        <div class="text-xs text-gray-500 lb-earned-label">Doğru tahmin</div>
-                        <div class="text-2xl font-extrabold text-green-600">${p.correctCount}</div>
+                        <div class="text-xs text-gray-500 lb-earned-label">Puan</div>
+                        <div class="text-2xl font-extrabold text-green-600">${p.leaderboardTotal ?? p.correctCount}</div>
                     </div>
                 </div>
             </div>
             <div class="team-result-grid mt-3">
                 ${teamBreakdown}
             </div>
-            <div class="text-xs text-gray-400 mt-2" title="Sıralama: Doğru tahmin sayısı → Eşitlikte toplam tahmin edilen puan yüksek olan öne geçer">○ Bekliyor · ✓ Doğru · ✗ Yanlış</div>
+            <div class="text-xs text-gray-400 mt-2" title="Sıralama: Puan (doğru tahmin + bonus) → Doğru tahmin sayısı">○ Bekliyor · ✓ Doğru · ✗ Yanlış</div>
         `;
         listContainer.appendChild(div);
     });
@@ -1987,10 +1987,10 @@ async function renderWeeklyCompetition(round) {
             line.className = 'flex justify-between gap-3 py-2 border-b';
             const name = document.createElement('span'); name.textContent = player.rank + '. ' + player.name;
             const points = document.createElement('strong');
-            points.textContent = player.correctCount + ' doğru tahmin';
-            points.title = 'Doğru tahmin edilen maç puanlarının toplamı: ' + player.points;
+            points.textContent = player.points + ' puan';
+            points.title = 'Doğru tahmin + bonus';
             const detail = document.createElement('small');
-            detail.textContent = player.points + ' maç puanı';
+            detail.textContent = player.correctCount + ' doğru tahmin';
             detail.style.cssText = 'display:block;font-weight:400;opacity:.7;font-size:.75rem;text-align:right';
             const score = document.createElement('div'); score.append(points, detail);
             line.append(name, score); box.appendChild(line);
@@ -2055,6 +2055,10 @@ function renderWeeklyPredictions(round) {
             pill.className = 'weekly-guess weekly-' + status;
             pill.textContent = guess ? String(guess.points) : '–';
             pill.title = name + ': ' + ({correct:'Doğru',incorrect:'Yanlış',pending:'Sonuç bekleniyor',missing:'Tahmin yok'})[status];
+            if (status === 'correct' && guess.bonusPoints > 0) {
+                pill.textContent += ' (+' + guess.bonusPoints + ' bonus)';
+                pill.title += ' · ' + (1 + guess.bonusPoints) + ' puan · ' + (guess.bonusReason || 'Bonus');
+            }
             pill.setAttribute('aria-label', pill.title);
             cell.appendChild(pill); row.appendChild(cell);
         });
@@ -2104,3 +2108,4 @@ window.onload = () => initApp();
 </script>
 </body>
 </html>
+
