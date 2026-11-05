@@ -633,6 +633,12 @@
 .weekly-matrix tbody tr:last-child > * { border-bottom:0; }
 .weekly-matrix tbody tr:hover { background:rgba(148,163,184,.08); }
 .weekly-guess { display:inline-flex; align-items:center; justify-content:center; width:2rem; height:2rem; border-radius:.6rem; font-weight:750; }
+.weekly-award { display:inline-flex; flex-direction:column; align-items:center; gap:.25rem; vertical-align:middle; }
+.weekly-award summary { display:flex; flex-direction:column; align-items:center; gap:.25rem; cursor:pointer; list-style:none; }
+.weekly-award summary::-webkit-details-marker { display:none; }
+.weekly-award summary:focus-visible { outline:2px solid #d97706; outline-offset:3px; border-radius:.6rem; }
+.weekly-bonus-badge { display:block; padding:.1rem .35rem; border-radius:999px; background:#fef3c7; color:#92400e; font-size:.65rem; font-weight:700; line-height:1.2; white-space:nowrap; }
+.weekly-bonus-detail { display:block; max-width:10rem; white-space:normal; overflow-wrap:anywhere; font-size:.7rem; margin-top:.35rem; }
 .weekly-correct { background:#d1fae5; color:#065f46; }
 .weekly-incorrect { background:#fee2e2; color:#991b1b; }
 .weekly-pending { background:#e2e8f0; color:#475569; }
@@ -2056,11 +2062,28 @@ function renderWeeklyPredictions(round) {
             pill.textContent = guess ? String(guess.points) : '–';
             pill.title = name + ': ' + ({correct:'Doğru',incorrect:'Yanlış',pending:'Sonuç bekleniyor',missing:'Tahmin yok'})[status];
             if (status === 'correct' && guess.bonusPoints > 0) {
-                pill.textContent += ' (+' + guess.bonusPoints + ' bonus)';
                 pill.title += ' · ' + (1 + guess.bonusPoints) + ' puan · ' + (guess.bonusReason || 'Bonus');
             }
             pill.setAttribute('aria-label', pill.title);
-            cell.appendChild(pill); row.appendChild(cell);
+            if (status === 'correct' && guess.bonusPoints > 0) {
+                const award = document.createElement('details');
+                award.className = 'weekly-award';
+                const summary = document.createElement('summary');
+                summary.title = pill.title;
+                summary.setAttribute('aria-label', pill.title + ' · Bonus detayları');
+                const badge = document.createElement('span');
+                badge.className = 'weekly-bonus-badge';
+                badge.textContent = '+' + guess.bonusPoints;
+                summary.append(pill, badge);
+                const detail = document.createElement('span');
+                detail.className = 'weekly-bonus-detail';
+                detail.textContent = '1 + ' + guess.bonusPoints + ' bonus = ' + (1 + guess.bonusPoints) + ' puan' + (guess.bonusReason ? ' · ' + guess.bonusReason : '');
+                award.append(summary, detail);
+                cell.appendChild(award);
+            } else {
+                cell.appendChild(pill);
+            }
+            row.appendChild(cell);
         });
         body.appendChild(row);
     });
